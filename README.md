@@ -4,7 +4,7 @@ BERT's MLM head model exposed as a service
 
 # Installation
 
-![Setup pytorch environment with/without GPU support using] https://github.com/ajitrajasekharan/multi_gpu_test
+Setup pytorch environment with/without GPU support using link https://github.com/ajitrajasekharan/multi_gpu_test
 
 
 # Usage 
