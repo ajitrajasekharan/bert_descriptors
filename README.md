@@ -1,6 +1,8 @@
 # bert_descriptors
 BERT's MLM head model exposed as a HTTP service
 
+*Example below uses BERT large cased*
+
 
 # Installation
 
