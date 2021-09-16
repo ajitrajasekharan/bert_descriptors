@@ -3,10 +3,10 @@ BERT's MLM head model exposed as a HTTP service
 
 *Example below uses BERT large cased*
 
-This service is used by https://github.com/ajitrajasekharan/unsupervised_NER
+This service is used by [Unsupervised NER](https://github.com/ajitrajasekharan/unsupervised_NER)
 # Installation
 
-Setup pytorch environment with/without GPU support using link https://github.com/ajitrajasekharan/multi_gpu_test
+Setup pytorch environment with/without GPU support using link [Multi GPU test](https://github.com/ajitrajasekharan/multi_gpu_test)
 
 *Make sure to follow conda environment activation instructions. Also tensorflow is not required. So we just neeed to run first.sh, second.sh and third.sh (from 1-4) performing the instructions displayed at end of each step *
 
