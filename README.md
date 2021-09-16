@@ -3,7 +3,7 @@ BERT's MLM head model exposed as a HTTP service
 
 *Example below uses BERT large cased*
 
-
+This service is used by https://github.com/ajitrajasekharan/unsupervised_NER
 # Installation
 
 Setup pytorch environment with/without GPU support using link https://github.com/ajitrajasekharan/multi_gpu_test
