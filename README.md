@@ -24,7 +24,8 @@ $ wget -O DES "http://127.0.0.1:8087/dummy/0/John flew from entity to Rio De Jan
 
 The output DES file should contain
 
-![DES](DES.png)
+
+<img src="DES.png" width="600">
   
  
  
