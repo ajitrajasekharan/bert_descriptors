@@ -19,12 +19,24 @@ logging.basicConfig(level=logging.INFO)
 DEFAULT_TOP_K = 40
 DEFAULT_MODEL_PATH='./'
 DEFAULT_TO_LOWER=False
+DESC_FILE="./common_descs.txt"
 
 try:
     from subprocess import DEVNULL  # Python 3.
 except ImportError:
     DEVNULL = open(os.devnull, 'wb')
 
+def read_descs(file_name):
+    ret_dict = {}
+    with open(file_name) as fp:
+        line = fp.readline().rstrip("\n")
+        if (len(line) >= 1):
+            ret_dict[line] = 1
+        while line:
+            line = fp.readline().rstrip("\n")
+            if (len(line) >= 1):
+                ret_dict[line] = 1
+    return ret_dict
 
 def read_vocab(file_name):
     l_vocab_dict = {}
@@ -47,6 +59,7 @@ class SentWrapper:
         self.tokenizer = BertTokenizer.from_pretrained(path,do_lower_case=to_lower) ### Set this to to True for uncased models
         self.model = BertForMaskedLM.from_pretrained(path)
         self.model.eval()
+        self.descs = read_descs(DESC_FILE)
         self.top_k = topk
         self.patched = patched
         self.abbrev = abbrev
@@ -108,6 +121,7 @@ class SentWrapper:
         mask_str = ""
         debug_str = "\nPIVOT_DESCRIPTORS:"
         cls_str = ""
+        addl_debug_str = ""
         delimiter_str = "\n--------Neighbors for all words in sentence below (including MASK word)-----\n\n"
         head_str ="\nTokenized input:" +  ' '.join(tokenized_text) + "\n\n"
         with torch.no_grad():
@@ -159,8 +173,8 @@ class SentWrapper:
                 debug_count = 0
                 cls_count = 0
                 for j in sorted_d:
-                    #if (j not in self.descs):
-                    #    continue
+                    if (j.lower() in self.descs): #eliminate words that gove no information on entity
+                        continue
                     if (j in string.punctuation or j.startswith('##') or len(j) == 1 or j.startswith('.') or j.startswith('[')):
                          continue
                     if (original_masked_index == word):
@@ -168,6 +182,10 @@ class SentWrapper:
                          if (debug_count < 10):
                              debug_str  = debug_str + " " + j
                              debug_count += 1
+                         else:
+                             if (debug_count < 20):
+                                addl_debug_str  = addl_debug_str + " " + j
+                                debug_count += 1
                     else:
                         if (usecls and word == 0):
                             if (cls_count < 10):
@@ -181,6 +199,8 @@ class SentWrapper:
             final_str = debug_str
             if (usecls):
                 final_str = final_str + " " + cls_str
+            else:
+                final_str = final_str + " " + addl_debug_str
         else:
             final_str =  head_str + "\n"  + mask_str + debug_str + "\n" +   delimiter_str + ret_str
         return final_str
