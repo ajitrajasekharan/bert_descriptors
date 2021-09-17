@@ -35,6 +35,7 @@ The output DES file should contain
  -  Two kinds of descriptor sets are returned now. 
       1) Return just the descriptors of the masked position as before (option 0 in GET call)
       2) Return descriptors of masked position as well as for [CLS] position (option 1 in GET call). This is useful for detecting entity type of a term/phrase. For example: Imatinib is a entity
+      3) Common descriptors are now used to filter terms that do not convey any entity information in results. This is to maximize entity information in generated output
   
  - Adaptive casing of input tokens to maximize hit with underlying vocab. This is meaningful for cased models only
  - Full distribution output is turned off by default and needs to be enabled explicitly
