@@ -180,16 +180,16 @@ class SentWrapper:
                     if (original_masked_index == word):
                          mask_str = mask_str + str(k+1) + "] " +  j + " " + str(sorted_d[j]) + "\n"
                          if (debug_count < 10):
-                             debug_str  = debug_str + " " + j
+                             debug_str  = debug_str + " " + j + " " + str(sorted_d[j])
                              debug_count += 1
                          else:
                              if (debug_count < 20):
-                                addl_debug_str  = addl_debug_str + " " + j
+                                addl_debug_str  = addl_debug_str + " " + j + " " + str(sorted_d[j])
                                 debug_count += 1
                     else:
                         if (usecls and word == 0):
                             if (cls_count < 10):
-                                cls_str  = cls_str + " " + j
+                                cls_str  = cls_str + " " + j + " " + str(sorted_d[j])
                                 cls_count += 1
                     ret_str = ret_str + str(k+1) + "] " +  j + " " + str(sorted_d[j]) + "\n"
                     k += 1
@@ -240,7 +240,10 @@ if __name__ == '__main__':
         print("To lower casing is set to:",results.tolower)
         #out = singleton.punct_sentence("Apocalypse is a entity")
         #print(out)
+        test(singleton,"Imatinib mesylate is used to treat entity",True)
+        pdb.set_trace()
         test(singleton,"Imatinib mesylate is used to treat entity",False)
+        pdb.set_trace()
         test(singleton,"Imatinib is a entity",singleton.usecls)
         test(singleton,"nsclc is a entity",singleton.usecls)
         test(singleton,"Ajit Rajasekharan is a entity",singleton.usecls)
