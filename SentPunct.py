@@ -40,7 +40,7 @@ class SentPunct(ResponseHandler.ResponseHandler):
             out = singleton.punct_sentence(param[1],usecls)
             #print("Arg = ",write_obj.path[1:])
             #out = singleton.punct_sentence(urllib.parse.unquote(write_obj.path[1:].lower()))
-            print(out)
+            print(out + "\n\n")
             if (len(out) >= 1):
                 write_obj.wfile.write(out.encode())
             else:
