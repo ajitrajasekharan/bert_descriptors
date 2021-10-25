@@ -46,12 +46,12 @@ def read_vocab(file_name):
             line = line.rstrip('\n')
             if (len(line) > 0):
                 l_vocab_dict[line.lower()] = line   #If there are multiple cased versions they will be collapsed into one. which is okay since we have the original saved. This is only used
-                                                    #when a word is not found in its pristine form in the original list.  
+                                                    #when a word is not found in its pristine form in the original list.
                 o_vocab_dict[line] = line
     print("Read vocab file:",len(o_vocab_dict))
     return o_vocab_dict,l_vocab_dict
 
-                
+
 class SentWrapper:
     def __init__(self, path,to_lower,patched,topk,abbrev,tokmod,vocab_path,usecls):
         print("Model path:",path,"lower casing set to:",to_lower," is patched ", patched)
@@ -173,6 +173,7 @@ class SentWrapper:
                 debug_count = 0
                 cls_count = 0
                 for j in sorted_d:
+                    sorted_d[j] = round(sorted_d[j],2)
                     if (j.lower() in self.descs): #eliminate words that gove no information on entity
                         continue
                     if (j in string.punctuation or j.startswith('##') or len(j) == 1 or j.startswith('.') or j.startswith('[')):
@@ -236,7 +237,7 @@ if __name__ == '__main__':
 
     results = parser.parse_args()
     try:
-        singleton = SentWrapper(results.model,results.tolower,results.patched,results.topk,results.abbrev,results.tokmod,results.vocab,results.usecls) 
+        singleton = SentWrapper(results.model,results.tolower,results.patched,results.topk,results.abbrev,results.tokmod,results.vocab,results.usecls)
         print("To lower casing is set to:",results.tolower)
         #out = singleton.punct_sentence("Apocalypse is a entity")
         #print(out)
