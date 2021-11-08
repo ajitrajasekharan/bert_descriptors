@@ -13,7 +13,8 @@ Setup pytorch environment with/without GPU support using link [Multi GPU test](h
 
 # Usage 
 Download a BERT model from Hugginface.
-e.g. [BERT base cased - pytorch_model.bin,voxab.txt,config.json] (https://huggingface.co/bert-large-uncased/tree/main) into current directory
+
+*e.g. [BERT base cased - pytorch_model.bin,voxab.txt,config.json] (https://huggingface.co/bert-large-uncased/tree/main) into current directory*
 
 Start server
 
