@@ -28,7 +28,7 @@ $ wget -O DES "http://127.0.0.1:8087/dummy/0/John flew from entity to Rio De Jan
 The output DES file should contain
 
 
-<img src="DES.png" width="1000">
+<img src="DES.png" width="600">
   
   
  # Revision notes
@@ -43,7 +43,7 @@ The output DES file should contain
  - Adaptive casing of input tokens to maximize hit with underlying vocab. This is meaningful for cased models only
  - Full distribution output is turned off by default and needs to be enabled explicitly. The output above is with full distribution option turned on. Current default output
  
- <img src="DES2.png" width="600">
+ <img src="DES2.png" width="1000">
  
  # License
  
