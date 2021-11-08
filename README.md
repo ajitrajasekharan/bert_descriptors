@@ -41,7 +41,7 @@ The output DES file should contain
       3) Common descriptors are now used to filter terms that do not convey any entity information in results. This is to maximize entity information in generated output
   
  - Adaptive casing of input tokens to maximize hit with underlying vocab. This is meaningful for cased models only
- - Full distribution output is turned off by default and needs to be enabled explicitly
+ - Full distribution output is turned off by default and needs to be enabled explicitly. The output above is with full distribution option turned on.
  
  
  # License
