@@ -43,7 +43,8 @@ The output DES file should contain
  - Adaptive casing of input tokens to maximize hit with underlying vocab. This is meaningful for cased models only
  - Full distribution output is turned off by default and needs to be enabled explicitly. The output above is with full distribution option turned on. Current default output
  
- <img src="DES2.png" width="1000">
+ <img src="DES2.png" width="1200">
+
  
  # License
  
