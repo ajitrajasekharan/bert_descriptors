@@ -9,9 +9,10 @@ import json
 
 #MODEL_PATH ='bert-large-cased'
 MODEL_PATH ='./'
+DEFAULT_LABELS_PATH='./labels.txt'
 TOLOWER = False
 PATCHED = False
-TOPK = 40
+TOPK = 20
 ABBREV = True
 #Tok mod is no longer need to be set now since we use subwords too for prediction. so set to false
 TOKMOD = False
@@ -30,7 +31,7 @@ class BatchHandler(ResponseHandler.ResponseHandler):
         print("In derived class")
         global singleton
         if singleton is None:
-            singleton = BatchInference.BatchInference(MODEL_PATH,TOLOWER,PATCHED,TOPK,ABBREV,TOKMOD,VOCAB) 
+            singleton = BatchInference.BatchInference(MODEL_PATH,TOLOWER,PATCHED,TOPK,ABBREV,TOKMOD,VOCAB,DEFAULT_LABELS_PATH) 
         if (write_obj is not None):
             param =write_obj.path[1:]
             print("Orig Arg = ",param)

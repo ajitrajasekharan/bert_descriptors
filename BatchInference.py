@@ -19,8 +19,9 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 
-DEFAULT_TOP_K = 3
+DEFAULT_TOP_K = 20
 DEFAULT_MODEL_PATH='./'
+DEFAULT_LABELS_PATH='./labels.txt'
 DEFAULT_TO_LOWER=False
 DESC_FILE="./common_descs.txt"
 SPECIFIC_TAG=":__entity__"
@@ -55,11 +56,71 @@ def read_vocab(file_name):
     print("Read vocab file:",len(o_vocab_dict))
     return o_vocab_dict,l_vocab_dict
 
+def consolidate_labels(existing_node,new_labels,new_counts):
+    """Consolidates all the labels and counts for terms ignoring casing
+
+    For instance, egfr may not have an entity label associated with it
+    but eGFR and EGFR may have. So if input is egfr, then this function ensures
+    the combined entities set fo eGFR and EGFR is made so as to return that union
+    for egfr
+    """
+    new_dict = {}
+    existing_labels_arr = existing_node["label"].split('/')
+    existing_counts_arr = existing_node["counts"].split('/')
+    new_labels_arr = new_labels.split('/')
+    new_counts_arr = new_counts.split('/')
+    assert(len(existing_labels_arr) == len(existing_counts_arr))
+    assert(len(new_labels_arr) == len(new_counts_arr))
+    for i in range(len(existing_labels_arr)):
+        new_dict[existing_labels_arr[i]] = int(existing_counts_arr[i])
+    for i in range(len(new_labels_arr)):
+        if (new_labels_arr[i] in new_dict):
+            new_dict[new_labels_arr[i]] += int(new_counts_arr[i])
+        else:
+            new_dict[new_labels_arr[i]] = int(new_counts_arr[i])
+    sorted_d = OrderedDict(sorted(new_dict.items(), key=lambda kv: kv[1], reverse=True))
+    ret_labels_str = ""
+    ret_counts_str = ""
+    count = 0
+    for key in sorted_d:
+        if (count == 0):
+            ret_labels_str = key
+            ret_counts_str = str(sorted_d[key])
+        else:
+            ret_labels_str += '/' +  key
+            ret_counts_str += '/' +  str(sorted_d[key])
+        count += 1
+    return {"label":ret_labels_str,"counts":ret_counts_str}
+
+
+def read_labels(labels_file):
+    terms_dict = OrderedDict()
+    lc_terms_dict = OrderedDict()
+    with open(labels_file,encoding="utf-8") as fin:
+        count = 1
+        for term in fin:
+            term = term.strip("\n")
+            term = term.split()
+            if (len(term) == 3):
+                terms_dict[term[2]] = {"label":term[0],"counts":term[1]}
+                lc_term = term[2].lower()
+                if (lc_term in lc_terms_dict):
+                     lc_terms_dict[lc_term] = consolidate_labels(lc_terms_dict[lc_term],term[0],term[1])
+                else:
+                     lc_terms_dict[lc_term] = {"label":term[0],"counts":term[1]}
+                count += 1
+            else:
+                print("Invalid line:",term)
+                assert(0)
+    print("count of labels in " + labels_file + ":", len(terms_dict))
+    return terms_dict,lc_terms_dict
+
 
 class BatchInference:
-    def __init__(self, path,to_lower,patched,topk,abbrev,tokmod,vocab_path):
+    def __init__(self, path,to_lower,patched,topk,abbrev,tokmod,vocab_path,labels_file):
         print("Model path:",path,"lower casing set to:",to_lower," is patched ", patched)
         self.path = path
+        self.labels_dict,self.lc_labels_dict = read_labels(labels_file)
         self.tokenizer = BertTokenizer.from_pretrained(path,do_lower_case=to_lower) ### Set this to to True for uncased models
         self.model = BertForMaskedLM.from_pretrained(path)
         self.model.eval()
@@ -242,6 +303,33 @@ class BatchInference:
         ret_obj[0]["predictions"] = new_sent_obj
     
 
+    def find_entity(self,word):
+        entities = self.labels_dict
+        lc_entities = self.lc_labels_dict
+        #words = self.filter_glue_words(words) #do not filter glue words anymore. Let them pass through
+        l_word = word.lower()
+        if l_word.isdigit():
+            ret_label = "MEASURE"
+            ret_counts = str(1)
+        elif (word in entities):
+            ret_label = entities[word]["label"]
+            ret_counts = entities[word]["counts"]
+        elif (l_word in entities):
+            ret_label = entities[l_word]["label"]
+            ret_counts = entities[l_word]["counts"]
+        elif (l_word in lc_entities):
+            ret_label = lc_entities[l_word]["label"]
+            ret_counts = lc_entities[l_word]["counts"]
+        else:
+            ret_label = "OTHER"
+            ret_counts = "1"
+        if (ret_label == "OTHER"):
+            ret_label = "UNTAGGED_ENTITY"
+            ret_counts = "1"
+        print(word,ret_label,ret_counts)
+        return ret_label,ret_counts
+
+
     def get_descriptors(self,sent):
         '''
             Batched creation of descriptors given a sentence.
@@ -363,7 +451,8 @@ class BatchInference:
                         if (sent_index == 0):
                             if (whole_word_count not in curr_sent):
                                 curr_sent[whole_word_count] = []
-                            curr_sent[whole_word_count].append({"term":tokenized_text_arr[sent_index][word],"desc":index,"v":str(round(float(sorted_d[index]),4))})
+                            entity,entity_count = self.find_entity(index)
+                            curr_sent[whole_word_count].append({"term":tokenized_text_arr[sent_index][word],"desc":index,"e":entity,"e_count":entity_count,"v":str(round(float(sorted_d[index]),4))})
                         else:
                             if (whole_word_count not in curr_sent):
                                 curr_sent[whole_word_count] = []
@@ -371,7 +460,8 @@ class BatchInference:
                                 term = "CLS"
                             else:
                                 term = "entity"
-                            curr_sent[whole_word_count].append({"term":term,"w":index,"v":str(round(float(sorted_d[index]),4))})
+                            entity,entity_count = self.find_entity(index)
+                            curr_sent[whole_word_count].append({"term":term,"desc":index,"e":entity,"e_count":entity_count,"v":str(round(float(sorted_d[index]),4))})
                         k += 1
                         if (k > top_k):
                             break
@@ -380,7 +470,10 @@ class BatchInference:
         print(ret_obj)
         self.aggregate_span_word_predictions_in_main_sentence(ret_obj,span_arr)
         print(ret_obj)
-        return ret_obj
+        #pdb.set_trace()
+        #final_obj = {"terms_arr":main_sent_arr,"span_arr":span_arr,"descs_and_entities":ret_obj,"all_sentences":all_sentences_arr}
+        final_obj = {"terms_arr":main_sent_arr,"span_arr":span_arr,"descs_and_entities":ret_obj}
+        return final_obj
 
 
 
@@ -404,6 +497,7 @@ if __name__ == '__main__':
     parser.add_argument('-tokmod', dest="tokmod", action='store_true',help='Modify input token casings to match vocab - meaningful only for cased models')
     parser.add_argument('-no-tokmod', dest="tokmod", action='store_false',help='Modify input token casings to match vocab - meaningful only for cased models')
     parser.add_argument('-vocab', action="store", dest="vocab", default=DEFAULT_MODEL_PATH,help='Path to vocab file. This is required only if tokmod is true')
+    parser.add_argument('-labels', action="store", dest="labels", default=DEFAULT_LABELS_PATH,help='Path to labels file. This returns labels also')
     parser.set_defaults(tolower=False)
     parser.set_defaults(patched=False)
     parser.set_defaults(abbrev=True)
@@ -411,7 +505,7 @@ if __name__ == '__main__':
 
     results = parser.parse_args()
     try:
-        singleton = BatchInference(results.model,results.tolower,results.patched,results.topk,results.abbrev,results.tokmod,results.vocab)
+        singleton = BatchInference(results.model,results.tolower,results.patched,results.topk,results.abbrev,results.tokmod,results.vocab,results.labels)
         print("To lower casing is set to:",results.tolower)
         #out = singleton.punct_sentence("Apocalypse is a entity")
         #print(out)
