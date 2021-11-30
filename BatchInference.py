@@ -418,7 +418,8 @@ class BatchInference:
                         whole_word_count += 1
                     if (sent_index == 0 and revised_span_arr[word] == 0):
                         continue
-                    if (sent_index != 0 and (word != 0 and word != len(orig_tokenized_length_arr[sent_index]) - 2)): #For all CI sentences pick only the neighbors of CLS and the last word of the sentence (X is a entity)
+#                    if (sent_index != 0 and (word != 0 and word != len(orig_tokenized_length_arr[sent_index]) - 2)): #For all CI sentences pick only the neighbors of CLS and the last word of the sentence (X is a entity)
+                    if (sent_index != 0 and (word != 0 and ((word == len(orig_tokenized_length_arr[sent_index]) - 4) or word == len(orig_tokenized_length_arr[sent_index]) - 3))): #For all CI sentences pick all terms excluding "is a " in "X is a entity"
                         continue
                     results_dict = {}
                     masked_index = word
