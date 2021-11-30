@@ -419,7 +419,7 @@ class BatchInference:
                     if (sent_index == 0 and revised_span_arr[word] == 0):
                         continue
 #                    if (sent_index != 0 and (word != 0 and word != len(orig_tokenized_length_arr[sent_index]) - 2)): #For all CI sentences pick only the neighbors of CLS and the last word of the sentence (X is a entity)
-                    if (sent_index != 0 and (word != 0 and ((word == len(orig_tokenized_length_arr[sent_index]) - 4) or word == len(orig_tokenized_length_arr[sent_index]) - 3))): #For all CI sentences pick all terms excluding "is a " in "X is a entity"
+                    if (sent_index != 0 and (word != 0 and (word == len(orig_tokenized_length_arr[sent_index]) - 4))): #For all CI sentences pick all terms excluding "is" in "X is a entity"
                         continue
                     results_dict = {}
                     masked_index = word
@@ -438,10 +438,11 @@ class BatchInference:
 
 
                     print("********* Top predictions for token: ",tokenized_text_arr[sent_index][word])
-                    if (sent_index == 0):
-                        top_k = self.top_k
-                    else:
-                        top_k = self.top_k/2
+                    #if (sent_index == 0):
+                    #    top_k = self.top_k
+                    #else:
+                    #    top_k = self.top_k/2
+                    top_k = self.top_k
                     for index in sorted_d:
                         #if (index in string.punctuation or index.startswith('##') or len(index) == 1 or index.startswith('.') or index.startswith('[')):
                         if index.lower() in self.descs:
@@ -481,7 +482,8 @@ class BatchInference:
 def test(singleton,test):
     print(test)
     out = singleton.get_descriptors(test)
-    print(out)
+    #print(out)
+    pdb.set_trace()
 
 
 if __name__ == '__main__':
@@ -510,6 +512,8 @@ if __name__ == '__main__':
         print("To lower casing is set to:",results.tolower)
         #out = singleton.punct_sentence("Apocalypse is a entity")
         #print(out)
+        test(singleton,"Ajit:__entity__ flew to Boston")
+        test(singleton,"imatinib was used to treat Michael Jackson")
         test(singleton,"Ajit Valath:__entity__ Rajasekharan is an engineer at nFerence headquartered in Cambrigde MA")
         test(singleton,"imatinib:__entity__")
         test(singleton,"imatinib")
@@ -530,7 +534,6 @@ if __name__ == '__main__':
         test(singleton,"Ajit:__entity__ Valath:__entity__ Rajasekharan is an engineer:__entity__ at nFerence headquartered in Cambrigde MA")
         test(singleton,"Ajit:__entity__ Valath:__entity__ Rajasekharan:__entity__ is an engineer:__entity__ at nFerence headquartered in Cambrigde MA")
         test(singleton,"Ajit Raj is an engineer:__entity__ at nFerence")
-        test(singleton,"Ajit:__entity__ is an engineer")
         test(singleton,"Ajit Valath:__entity__ Rajasekharan is an engineer:__entity__ at nFerence headquartered in Cambrigde:__entity__ MA")
         test(singleton,"Ajit Valath Rajasekharan is an engineer:__entity__ at nFerence headquartered in Cambrigde:__entity__ MA")
         test(singleton,"Ajit Valath Rajasekharan is an engineer:__entity__ at nFerence headquartered in Cambrigde MA")
