@@ -1,2 +1,4 @@
 {"POS_SERVER_URL": "http://127.0.0.1:8073/",
-"COMMON_DESCS_FILE": "untagged_terms.txt"}
+"LOG_DESCS": "1",
+"COMMON_DESCS_FILE": "untagged_terms.txt"
+}

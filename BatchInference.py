@@ -129,8 +129,12 @@ class BatchInference:
         self.patched = patched
         self.abbrev = abbrev
         self.tokmod  = tokmod
-        #self.ci_fp = open("log_ci_predictions.txt","a")
-        #self.cs_fp = open("log_cs_predictions.txt","a")
+        if (cf.read_config()["LOG_DESCS"] == "1"):
+            self.log_descs = True
+            self.ci_fp = open("log_ci_predictions.txt","a")
+            self.cs_fp = open("log_cs_predictions.txt","a")
+        else:
+            self.log_descs = False
         self.pos_server_url  = cf.read_config()["POS_SERVER_URL"]
         if (tokmod):
             self.o_vocab_dict,self.l_vocab_dict = read_vocab(vocab_path + "/vocab.txt")
@@ -410,8 +414,9 @@ class BatchInference:
                 ret_obj[sent_index] = {}
                 ret_obj[sent_index]["sentence"] = all_sentences_arr[sent_index]
                 print("*** Current sentence ***",all_sentences_arr[sent_index])
-                #fp = self.cs_fp if sent_index == 0  else self.ci_fp
-                #fp.write("\nCurrent sentence: " + all_sentences_arr[sent_index] + "\n")
+                if (self.log_descs):
+                    fp = self.cs_fp if sent_index == 0  else self.ci_fp
+                    fp.write("\nCurrent sentence: " + all_sentences_arr[sent_index] + "\n")
                 curr_sent = {}
                 ret_obj[sent_index]["predictions"] = curr_sent
                 whole_word_count = 0
@@ -443,7 +448,8 @@ class BatchInference:
 
 
                     print("********* Top predictions for token: ",tokenized_text_arr[sent_index][word])
-                    #fp.write("********* Top predictions for token: " + tokenized_text_arr[sent_index][word] + "\n")
+                    if (self.log_descs):
+                        fp.write("********* Top predictions for token: " + tokenized_text_arr[sent_index][word] + "\n")
                     #pdb.set_trace()
                     #if (sent_index == 0):
                     #    top_k = self.top_k
@@ -461,7 +467,8 @@ class BatchInference:
                             if (whole_word_count not in curr_sent):
                                 curr_sent[whole_word_count] = []
                             entity,entity_count = self.find_entity(index)
-                            #self.cs_fp.write(index + " " + entity + "\n")
+                            if (self.log_descs):
+                                self.cs_fp.write(index + " " + entity + "\n")
                             curr_sent[whole_word_count].append({"term":tokenized_text_arr[sent_index][word],"desc":index,"e":entity,"e_count":entity_count,"v":str(round(float(sorted_d[index]),4))})
                         else:
                             if (whole_word_count not in curr_sent):
@@ -471,7 +478,8 @@ class BatchInference:
                             else:
                                 term = "entity"
                             entity,entity_count = self.find_entity(index)
-                            #self.ci_fp.write(index + " " + entity + "\n")
+                            if (self.log_descs):
+                                self.ci_fp.write(index + " " + entity + "\n")
                             curr_sent[whole_word_count].append({"term":term,"desc":index,"e":entity,"e_count":entity_count,"v":str(round(float(sorted_d[index]),4))})
                         k += 1
                         if (k > top_k):
@@ -484,8 +492,9 @@ class BatchInference:
         #pdb.set_trace()
         #final_obj = {"terms_arr":main_sent_arr,"span_arr":span_arr,"descs_and_entities":ret_obj,"all_sentences":all_sentences_arr}
         final_obj = {"terms_arr":main_sent_arr,"span_arr":span_arr,"descs_and_entities":ret_obj}
-        #self.ci_fp.flush()
-        #self.cs_fp.flush()
+        if (self.log_descs):
+            self.ci_fp.flush()
+            self.cs_fp.flush()
         return final_obj
 
 
