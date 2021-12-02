@@ -131,8 +131,8 @@ class BatchInference:
         self.tokmod  = tokmod
         if (cf.read_config()["LOG_DESCS"] == "1"):
             self.log_descs = True
-            self.ci_fp = open("log_ci_predictions.txt","a")
-            self.cs_fp = open("log_cs_predictions.txt","a")
+            self.ci_fp = open("log_ci_predictions.txt","w")
+            self.cs_fp = open("log_cs_predictions.txt","w")
         else:
             self.log_descs = False
         self.pos_server_url  = cf.read_config()["POS_SERVER_URL"]
@@ -335,6 +335,15 @@ class BatchInference:
         print(word,ret_label,ret_counts)
         return ret_label,ret_counts
 
+    #This is just a trivial hack for consistency of CI prediction of numbers
+    def override_ci_number_predictions(self,masked_sent):                                                                                                                                                                                                          
+        words = masked_sent.split()                                                                                                                                                                                                                        
+        words_count = len(words)                                                                                                                                                                                                                           
+        if (len(words) == 4 and words[words_count-1] == "entity" and words[words_count -2] == "a" and words[words_count -3] == "is"  and words[0].isnumeric()): #only integers skipped                                                                     
+            return True                                                                                                                                                                                                                               
+        else:                                                                                                                                                                                                                                              
+            return False
+                               
 
     def get_descriptors(self,sent):
         '''
@@ -468,9 +477,10 @@ class BatchInference:
                                 curr_sent[whole_word_count] = []
                             entity,entity_count = self.find_entity(index)
                             if (self.log_descs):
-                                self.cs_fp.write(index + " " + entity + "\n")
+                                self.cs_fp.write(index + " " + entity +  " " +  entity_count + " " + str(round(float(sorted_d[index]),4)) + "\n")
                             curr_sent[whole_word_count].append({"term":tokenized_text_arr[sent_index][word],"desc":index,"e":entity,"e_count":entity_count,"v":str(round(float(sorted_d[index]),4))})
                         else:
+                            #CI predictions of the form X is a entity
                             if (whole_word_count not in curr_sent):
                                 curr_sent[whole_word_count] = []
                             if (word == 0):
@@ -478,8 +488,13 @@ class BatchInference:
                             else:
                                 term = "entity"
                             entity,entity_count = self.find_entity(index)
+                            override = self.override_ci_number_predictions(all_sentences_arr[sent_index])
+                            if (override):
+                               index = "two"
+                               entity_count = "1"
+                               entity = "NUMBER"
                             if (self.log_descs):
-                                self.ci_fp.write(index + " " + entity + "\n")
+                                self.ci_fp.write(index + " " + entity + " " +  entity_count + " " + str(round(float(sorted_d[index]),4)) +  "\n")
                             curr_sent[whole_word_count].append({"term":term,"desc":index,"e":entity,"e_count":entity_count,"v":str(round(float(sorted_d[index]),4))})
                         k += 1
                         if (k > top_k):
@@ -502,7 +517,7 @@ class BatchInference:
 def test(singleton,test):
     print(test)
     out = singleton.get_descriptors(test)
-    #print(out)
+    print(out)
     pdb.set_trace()
 
 
@@ -532,7 +547,11 @@ if __name__ == '__main__':
         print("To lower casing is set to:",results.tolower)
         #out = singleton.punct_sentence("Apocalypse is a entity")
         #print(out)
+        test(singleton,"Fyodor:__entity__ Mikhailovich:__entity__ Dostoevsky:__entity__ was treated for Parkinsons")
+        test(singleton,"imatinib was used to treat Michael:__entity__ Jackson:__entity__")
+        test(singleton,"Ajit flew to Boston:__entity__")
         test(singleton,"Ajit:__entity__ flew to Boston")
+        test(singleton,"A eGFR below 60:__entity__ indicates chronic kidney disease")
         test(singleton,"imatinib was used to treat Michael Jackson")
         test(singleton,"Ajit Valath:__entity__ Rajasekharan is an engineer at nFerence headquartered in Cambrigde MA")
         test(singleton,"imatinib:__entity__")
