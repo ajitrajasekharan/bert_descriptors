@@ -205,7 +205,7 @@ class BatchInference:
 
     def gen_single_phrase_sentences(self,terms_arr,span_arr):
         sentence_template = "%s is a entity"
-        #print(span_arr)
+        print(span_arr)
         sentences = []
         singleton_spans_arr  = []
         run_index = 0
@@ -232,8 +232,8 @@ class BatchInference:
                 sentence = sentence_template % entity
                 sentences.append(sentence)
                 singleton_spans_arr.append(singleton_span)
-                #print(sentence)
-                #rint(singleton_span)
+                print(sentence)
+                print(singleton_span)
                 entity = ""
                 singleton_span = []
             else:
@@ -241,13 +241,12 @@ class BatchInference:
         return sentences,singleton_spans_arr
 
 
-
     def gen_padded_sentence(self,text,max_tokenized_sentence_length,tokenized_text_arr,orig_tokenized_length_arr,indexed_tokens_arr,attention_mask_arr,to_replace):
         if (to_replace):
             text_arr = text.split()
             new_text_arr = []
             for i in range(len(text_arr)):
-                if (text_arr[i] == "entity" ):
+                if (text_arr[i] == "entity"):
                     new_text_arr.append( "[MASK]")
                 else:
                     new_text_arr.append(text_arr[i])
@@ -263,6 +262,52 @@ class BatchInference:
         orig_tokenized_length_arr.append(tokenized_text)
         return max_tokenized_sentence_length
 
+    #Recreate span arr to account for tokenization splitting words.
+    def recreate_span(self,main_sent_arr,tokenized_text,span_arr):
+        span_arr_index = 0
+        last_span_value = -1
+        revised_span_arr = []
+        adjusted_tokenized_text = []
+        main_arr_len = len(main_sent_arr)
+        for i in range(len(tokenized_text)):
+            #print(i,tokenized_text[i])
+            adjusted_tokenized_text.append(tokenized_text[i])
+            if (i == 0 or i == len(tokenized_text) -1):
+                revised_span_arr.append(0)
+                continue
+            if (tokenized_text[i].startswith('##')):
+                assert(last_span_value != -1)
+                revised_span_arr.append(last_span_value)
+            else:
+                if (span_arr_index < main_arr_len and main_sent_arr[span_arr_index].startswith(tokenized_text[i])):
+                    print(main_sent_arr[span_arr_index],tokenized_text[i],span_arr_index)
+                    revised_span_arr.append(span_arr[span_arr_index])
+                    last_span_value = span_arr[span_arr_index]
+                    span_arr_index += 1
+                else:
+                    #this is the case where tokenizer breaks down a word without # sign addition. Example BCR-ABL is broken into BCR,-,ABL So we treat as though it is so
+                    adjusted_tokenized_text[i] = "##" + tokenized_text[i]
+                    revised_span_arr.append(last_span_value)
+        assert(len(revised_span_arr) == len(tokenized_text))
+        assert(len(adjusted_tokenized_text) == len(tokenized_text))
+        return revised_span_arr,adjusted_tokenized_text
+
+    def aggregate_span_word_predictions_in_main_sentence(self,ret_obj,span_arr):
+        new_sent_obj = {} 
+        last_key_pos = -1
+        curr_sent_obj = ret_obj[0]["predictions"]
+        for key in curr_sent_obj:
+            span_index = key - 1
+            if (span_arr[span_index] == 1):
+                if (span_index > 0 and span_arr[span_index -1] == 1):
+                    new_sent_obj[last_key_pos].extend(curr_sent_obj[key])
+                else:
+                    last_key_pos = key
+                    new_sent_obj[key] = curr_sent_obj[key]
+            else:
+                if (key in  curr_sent_obj):
+                    new_sent_obj[key] = curr_sent_obj[key]
+        ret_obj[0]["predictions"] = new_sent_obj
     
 
     def find_entity(self,word):
@@ -288,7 +333,7 @@ class BatchInference:
         if (ret_label == "OTHER"):
             ret_label = "UNTAGGED_ENTITY"
             ret_counts = "1"
-        #print(word,ret_label,ret_counts)
+        print(word,ret_label,ret_counts)
         return ret_label,ret_counts
 
     #This is just a trivial hack for consistency of CI prediction of numbers
@@ -305,7 +350,7 @@ class BatchInference:
         '''
             Batched creation of descriptors given a sentence.
                 1) Find noun phrases to tag in a sentence if user did not explicitly tag. 
-                2) Create 'N' CS and  CI sentences if there are N phrases to tag.  Total 2*N sentences
+                2) Create 'N' CI sentences if there are N phrases to tag. So in total 1 + N sentences
                 3) Create a batch padding all sentences to the maximum sentence length.
                 4) Perform inference on batch 
                 5) Return json of descriptors for the ooriginal sentence as well as all CI sentences
@@ -325,29 +370,26 @@ class BatchInference:
             terms_arr = self.extract_POS(r.text)
     
         #Note span arr only contains phrases in the input that need to be tagged - not the span of all phrases in sentences
-        #Step 2. Create N CS sentences
-        #This returns masked sentences for all positions
         main_sent_arr,masked_sent_arr,span_arr = utils.detect_masked_positions(terms_arr)
 
+        #TBD. check if this is rquired anymore
+        not_used_masked_sent_arr,span_arr = utils.filter_common_noun_spans(span_arr,masked_sent_arr,terms_arr,self.descs)
 
         #Step 2. Create N CI sentences
         singleton_sentences,not_used_singleton_spans_arr = self.gen_single_phrase_sentences(terms_arr,span_arr)
 
-
-        #We now have 2*N sentences
+        #We now have 1 + N sentences
         max_tokenized_sentence_length = 0
         tokenized_text_arr = []
         indexed_tokens_arr = []
         attention_mask_arr = []
         all_sentences_arr = []
         orig_tokenized_length_arr = []
-        assert(len(masked_sent_arr) == len(singleton_sentences))
-        for ci_s,cs_s in zip(singleton_sentences,masked_sent_arr):
-            all_sentences_arr.append(ci_s)
-            max_tokenized_sentence_length = self.gen_padded_sentence(ci_s,max_tokenized_sentence_length,tokenized_text_arr,orig_tokenized_length_arr,indexed_tokens_arr,attention_mask_arr,True)
-            cs_s = ' '.join(cs_s).replace("__entity__","entity")
-            all_sentences_arr.append(cs_s)
-            max_tokenized_sentence_length = self.gen_padded_sentence(cs_s,max_tokenized_sentence_length,tokenized_text_arr,orig_tokenized_length_arr,indexed_tokens_arr,attention_mask_arr,True)
+        all_sentences_arr.append(' '.join(main_sent_arr))
+        max_tokenized_sentence_length = self.gen_padded_sentence(all_sentences_arr[0],max_tokenized_sentence_length,tokenized_text_arr,orig_tokenized_length_arr,indexed_tokens_arr,attention_mask_arr,False)
+        for text in singleton_sentences:
+            all_sentences_arr.append(text)
+            max_tokenized_sentence_length = self.gen_padded_sentence(text,max_tokenized_sentence_length,tokenized_text_arr,orig_tokenized_length_arr,indexed_tokens_arr,attention_mask_arr,True)
 
 
         #pad all sentences with length less than max sentence length. This includes the full sentence too since we used indexed_tokens_arr
@@ -358,6 +400,11 @@ class BatchInference:
                 indexed_tokens_arr[i].extend(padding)
                 attention_mask_arr[i].extend(att_padding)
 
+        #create revised span arr for main sentence, taking into account tokenization of text
+        #We need this to aggregate predictions across tokenized pieces of a word whose descriptors that
+        #are of interest
+        revised_span_arr,adjusted_tokenized_text = self.recreate_span(main_sent_arr,tokenized_text_arr[0],span_arr) #Recreate the span arr of the main sentence
+        
 
         assert(len(main_sent_arr) == len(span_arr))
         assert(len(all_sentences_arr) == len(indexed_tokens_arr))
@@ -368,37 +415,33 @@ class BatchInference:
         tokens_tensor = torch.tensor(indexed_tokens_arr)
         attention_tensors = torch.tensor(attention_mask_arr)
 
-        print("Input:",sent)
+
         ret_obj = OrderedDict()
         with torch.no_grad():
             predictions = self.model(tokens_tensor, attention_mask=attention_tensors)
             for sent_index in  range(len(predictions[0])):
 
-                #print("*** Current sentence ***",all_sentences_arr[sent_index])
+                ret_obj[sent_index] = {}
+                ret_obj[sent_index]["sentence"] = all_sentences_arr[sent_index]
+                print("*** Current sentence ***",all_sentences_arr[sent_index])
                 if (self.log_descs):
-                    fp = self.cs_fp if sent_index %2 != 0  else self.ci_fp
+                    fp = self.cs_fp if sent_index == 0  else self.ci_fp
                     fp.write("\nCurrent sentence: " + all_sentences_arr[sent_index] + "\n")
-                prediction = "ci_prediction" if (sent_index %2 == 0 ) else "cs_prediction"
-                out_index = int(sent_index/2) + 1
-                if (out_index not in ret_obj):
-                    ret_obj[out_index] = {}
-                assert(prediction not in ret_obj[out_index])
-                ret_obj[out_index][prediction] = {}
-                ret_obj[out_index][prediction]["sentence"] = all_sentences_arr[sent_index]
-                curr_sent_arr = []
-                ret_obj[out_index][prediction]["descs"] = curr_sent_arr
+                curr_sent = {}
+                ret_obj[sent_index]["predictions"] = curr_sent
+                whole_word_count = 0
 
                 for word in range(len(tokenized_text_arr[sent_index])):
-                    if (word == len(tokenized_text_arr[sent_index]) - 1): # SEP is  skipped for CI and CS
+                    if ((word == 0 and sent_index == 0) or word == len(tokenized_text_arr[sent_index]) - 1): # We skip cls for main sentence. We use cls only for CI predictions. SEP is always skipped
+                        continue
+                    if (sent_index == 0 and  not adjusted_tokenized_text[word].startswith("##")):
+                        whole_word_count += 1
+                    if (sent_index == 0 and revised_span_arr[word] == 0):
                         continue
                     #if (sent_index != 0 and (word != 0 and word != len(orig_tokenized_length_arr[sent_index]) - 2)): #For all CI sentences pick only the neighbors of CLS and the last word of the sentence (X is a entity)
-                    if (sent_index %2 == 0 and (word != 0 and word != len(orig_tokenized_length_arr[sent_index]) - 2) and word != len(orig_tokenized_length_arr[sent_index]) - 3): #For all CI sentences - just pick CLS, "a" and "entity"
+                    if (sent_index != 0 and (word != 0 and word != len(orig_tokenized_length_arr[sent_index]) - 2) and word != len(orig_tokenized_length_arr[sent_index]) - 3): #For all CI sentences - just pick CLS, "a" and "entity"
                     #if (sent_index != 0 and (word != 0 and (word == len(orig_tokenized_length_arr[sent_index]) - 4))): #For all CI sentences pick ALL terms excluding "is" in "X is a entity"
                         continue
-                    if (sent_index %2 != 0 and tokenized_text_arr[sent_index][word] != "[MASK]"): # for all CS sentences skip all terms except the mask position
-                        continue
-
-
                     results_dict = {}
                     masked_index = word
                     #pick all model predictions for current position word
@@ -415,9 +458,14 @@ class BatchInference:
                     sorted_d = OrderedDict(sorted(results_dict.items(), key=lambda kv: kv[1], reverse=True))
 
 
-                    #print("********* Top predictions for token: ",tokenized_text_arr[sent_index][word])
+                    print("********* Top predictions for token: ",tokenized_text_arr[sent_index][word])
                     if (self.log_descs):
                         fp.write("********* Top predictions for token: " + tokenized_text_arr[sent_index][word] + "\n")
+                    #pdb.set_trace()
+                    #if (sent_index == 0):
+                    #    top_k = self.top_k
+                    #else:
+                    #    top_k = self.top_k/2
                     top_k = self.top_k
                     for index in sorted_d:
                         #if (index in string.punctuation or index.startswith('##') or len(index) == 1 or index.startswith('.') or index.startswith('[')):
@@ -426,14 +474,21 @@ class BatchInference:
                         if (index in string.punctuation  or len(index) == 1 or index.startswith('.') or index.startswith('[')):
                             continue
                         #print(index,round(float(sorted_d[index]),4))
-                        if (sent_index % 2 != 0):
-                            #CS predictions
+                        if (sent_index == 0):
+                            if (whole_word_count not in curr_sent):
+                                curr_sent[whole_word_count] = []
                             entity,entity_count = self.find_entity(index)
                             if (self.log_descs):
                                 self.cs_fp.write(index + " " + entity +  " " +  entity_count + " " + str(round(float(sorted_d[index]),4)) + "\n")
-                            curr_sent_arr.append({"desc":index,"e":entity,"e_count":entity_count,"v":str(round(float(sorted_d[index]),4))})
+                            curr_sent[whole_word_count].append({"term":tokenized_text_arr[sent_index][word],"desc":index,"e":entity,"e_count":entity_count,"v":str(round(float(sorted_d[index]),4))})
                         else:
                             #CI predictions of the form X is a entity
+                            if (whole_word_count not in curr_sent):
+                                curr_sent[whole_word_count] = []
+                            if (word == 0):
+                                term = "CLS"
+                            else:
+                                term = "entity"
                             entity,entity_count = self.find_entity(index)
                             override = self.override_ci_number_predictions(all_sentences_arr[sent_index])
                             if (override):
@@ -442,16 +497,18 @@ class BatchInference:
                                entity = "NUMBER"
                             if (self.log_descs):
                                 self.ci_fp.write(index + " " + entity + " " +  entity_count + " " + str(round(float(sorted_d[index]),4)) +  "\n")
-                            curr_sent_arr.append({"desc":index,"e":entity,"e_count":entity_count,"v":str(round(float(sorted_d[index]),4))})
+                            curr_sent[whole_word_count].append({"term":term,"desc":index,"e":entity,"e_count":entity_count,"v":str(round(float(sorted_d[index]),4))})
                         k += 1
-                        if (k >= top_k):
+                        if (k > top_k):
                             break
-                    #print()
+                    print()
+        print("Input:",sent)
         #print(ret_obj)
+        self.aggregate_span_word_predictions_in_main_sentence(ret_obj,span_arr)
         #print(ret_obj)
         #pdb.set_trace()
         #final_obj = {"terms_arr":main_sent_arr,"span_arr":span_arr,"descs_and_entities":ret_obj,"all_sentences":all_sentences_arr}
-        final_obj = {"input":sent,"terms_arr":main_sent_arr,"span_arr":span_arr,"descs_and_entities":ret_obj}
+        final_obj = {"terms_arr":main_sent_arr,"span_arr":span_arr,"descs_and_entities":ret_obj}
         if (self.log_descs):
             self.ci_fp.flush()
             self.cs_fp.flush()
@@ -460,12 +517,12 @@ class BatchInference:
 
 
 def test(singleton,test):
-    #print(test)
+    print(test)
     out = singleton.get_descriptors(test)
-    #print(out)
-    #with open("debug.txt","w") as fp:
-    #    fp.write(json.dumps(out,indent=4))
-    #pdb.set_trace()
+    print(out)
+    with open("debug.txt","w") as fp:
+        fp.write(json.dumps(out,indent=4))
+    pdb.set_trace()
 
 
 if __name__ == '__main__':
@@ -494,7 +551,7 @@ if __name__ == '__main__':
         print("To lower casing is set to:",results.tolower)
         #out = singleton.punct_sentence("Apocalypse is a entity")
         #print(out)
-        test(singleton,"Fyodor:__entity__ Mikhailovich:__entity__ Dostoevsky:__entity__ was treated for Parkinsons:__entity__ and later died of lung carcinoma")
+        test(singleton,"Fyodor:__entity__ Mikhailovich:__entity__ Dostoevsky:__entity__ was treated for Parkinsons:__entity__")
         test(singleton,"Fyodor:__entity__ Mikhailovich:__entity__ Dostoevsky:__entity__")
         test(singleton,"imatinib was used to treat Michael:__entity__ Jackson:__entity__")
         test(singleton,"Ajit flew to Boston:__entity__")
@@ -527,16 +584,16 @@ if __name__ == '__main__':
         test(singleton,"Ajit Valath Rajasekharan is an engineer at nFerence headquartered in Cambrigde MA")
         test(singleton,"Ajit:__entity__ Rajasekharan:__entity__ is an engineer at nFerence:__entity__")
         test(singleton,"Imatinib mesylate is used to treat non small cell lung cancer")
-        test(singleton,"Imatinib mesylate is used to treat :__entity__")
-        test(singleton,"Imatinib is a :__entity__")
-        test(singleton,"nsclc is a :__entity__")
-        test(singleton,"Ajit Rajasekharan is a :__entity__")
-        test(singleton,"ajit rajasekharan is a :__entity__")
-        test(singleton,"John Doe is a :__entity__")
-        test(singleton,"john doe is a :__entity__")
-        test(singleton,"Abubakkar Siddiq is a :__entity__")
-        test(singleton,"eGFR is a :__entity__")
-        test(singleton,"EGFR is a :__entity__")
+        test(singleton,"Imatinib mesylate is used to treat entity")
+        test(singleton,"Imatinib is a entity")
+        test(singleton,"nsclc is a entity")
+        test(singleton,"Ajit Rajasekharan is a entity")
+        test(singleton,"ajit rajasekharan is a entity")
+        test(singleton,"John Doe is a entity")
+        test(singleton,"john doe is a entity")
+        test(singleton,"Abubakkar Siddiq is a entity")
+        test(singleton,"eGFR is a entity")
+        test(singleton,"EGFR is a entity")
     except:
         print("Unexpected error:", sys.exc_info()[0])
         traceback.print_exc(file=sys.stdout)
