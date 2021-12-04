@@ -130,6 +130,7 @@ class BatchInference:
         self.patched = patched
         self.abbrev = abbrev
         self.tokmod  = tokmod
+        self.always_log_fp = open("CI_LOGS.txt","a")
         if (cf.read_config()["LOG_DESCS"] == "1"):
             self.log_descs = True
             self.ci_fp = open("log_ci_predictions.txt","w")
@@ -443,6 +444,8 @@ class BatchInference:
                             if (self.log_descs):
                                 self.ci_fp.write(index + " " + entity + " " +  entity_count + " " + str(round(float(sorted_d[index]),4)) +  "\n")
                             curr_sent_arr.append({"desc":index,"e":entity,"e_count":entity_count,"v":str(round(float(sorted_d[index]),4))})
+                            if (index != "two" and not index.startswith("#")):
+                                self.always_log_fp.write(' '.join(all_sentences_arr[sent_index].split()[:-1]) + " " + index + " :__entity__\n")
                         k += 1
                         if (k >= top_k):
                             break
@@ -528,15 +531,11 @@ if __name__ == '__main__':
         test(singleton,"Ajit:__entity__ Rajasekharan:__entity__ is an engineer at nFerence:__entity__")
         test(singleton,"Imatinib mesylate is used to treat non small cell lung cancer")
         test(singleton,"Imatinib mesylate is used to treat :__entity__")
-        test(singleton,"Imatinib is a :__entity__")
-        test(singleton,"nsclc is a :__entity__")
-        test(singleton,"Ajit Rajasekharan is a :__entity__")
-        test(singleton,"ajit rajasekharan is a :__entity__")
-        test(singleton,"John Doe is a :__entity__")
-        test(singleton,"john doe is a :__entity__")
-        test(singleton,"Abubakkar Siddiq is a :__entity__")
-        test(singleton,"eGFR is a :__entity__")
-        test(singleton,"EGFR is a :__entity__")
+        test(singleton,"Imatinib is a term:__entity__")
+        test(singleton,"nsclc is a term:__entity__")
+        test(singleton,"Ajit Rajasekharan is a term:__entity__")
+        test(singleton,"ajit rajasekharan is a term:__entity__")
+        test(singleton,"John Doe is a term:__entity__")
     except:
         print("Unexpected error:", sys.exc_info()[0])
         traceback.print_exc(file=sys.stdout)
