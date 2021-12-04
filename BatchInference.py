@@ -433,6 +433,8 @@ class BatchInference:
                             if (self.log_descs):
                                 self.cs_fp.write(index + " " + entity +  " " +  entity_count + " " + str(round(float(sorted_d[index]),4)) + "\n")
                             curr_sent_arr.append({"desc":index,"e":entity,"e_count":entity_count,"v":str(round(float(sorted_d[index]),4))})
+                            if (all_sentences_arr[sent_index].strip().endswith("entity")):
+                                self.always_log_fp.write(' '.join(all_sentences_arr[sent_index].split()[:-1]) + " " + index + " :__entity__\n")
                         else:
                             #CI predictions of the form X is a entity
                             entity,entity_count = self.find_entity(index)
@@ -444,7 +446,7 @@ class BatchInference:
                             if (self.log_descs):
                                 self.ci_fp.write(index + " " + entity + " " +  entity_count + " " + str(round(float(sorted_d[index]),4)) +  "\n")
                             curr_sent_arr.append({"desc":index,"e":entity,"e_count":entity_count,"v":str(round(float(sorted_d[index]),4))})
-                            if (index != "two" and not index.startswith("#")):
+                            if (index != "two" and not index.startswith("#")  and not all_sentences_arr[sent_index].strip().startswith("is ")):
                                 self.always_log_fp.write(' '.join(all_sentences_arr[sent_index].split()[:-1]) + " " + index + " :__entity__\n")
                         k += 1
                         if (k >= top_k):
@@ -458,22 +460,69 @@ class BatchInference:
         if (self.log_descs):
             self.ci_fp.flush()
             self.cs_fp.flush()
+        self.always_log_fp.flush()
         return final_obj
 
 
+test_arr = [
+        "Asbestos is a highly :__entity__",
+        "Fyodor:__entity__ Mikhailovich:__entity__ Dostoevsky:__entity__ was treated for Parkinsons:__entity__ and later died of lung carcinoma",
+        "Fyodor:__entity__ Mikhailovich:__entity__ Dostoevsky:__entity__",
+        "imatinib was used to treat Michael:__entity__ Jackson:__entity__",
+        "Ajit flew to Boston:__entity__",
+        "Ajit:__entity__ flew to Boston",
+        "A eGFR below 60:__entity__ indicates chronic kidney disease",
+        "imatinib was used to treat Michael Jackson",
+        "Ajit Valath:__entity__ Rajasekharan is an engineer at nFerence headquartered in Cambrigde MA",
+        "imatinib:__entity__",
+        "imatinib",
+        "iplimumab:__entity__",
+        "iplimumab",
+        "engineer:__entity__",
+        "engineer",
+        "Complications include peritonsillar:__entity__ abscess::__entity__",
+        "Imatinib was the first signal transduction inhibitor (STI,, used in a clinical setting. It prevents a BCR-ABL protein from exerting its role in the oncogenic pathway in chronic:__entity__ myeloid:__entity__ leukemia:__entity__ (CML,",
+        "Imatinib was the first signal transduction inhibitor (STI,, used in a clinical setting. It prevents a BCR-ABL protein from exerting its role in the oncogenic pathway in chronic myeloid leukemia (CML,",
+        "Imatinib was the first signal transduction inhibitor (STI,, used in a clinical setting. It prevents a BCR-ABL protein from exerting its role in the oncogenic pathway in chronic:__entity__ myeloid:___entity__ leukemia:__entity__ (CML,",
+        "Ajit Rajasekharan is an engineer:__entity__ at nFerence:__entity__",
+        "Imatinib was the first signal transduction inhibitor (STI,, used in a clinical setting. It prevents a BCR-ABL protein from exerting its role in the oncogenic pathway in chronic myeloid leukemia (CML,",
+        "Ajit:__entity__ Rajasekharan:__entity__ is an engineer",
+        "Imatinib:__entity__ was the first signal transduction inhibitor (STI,, used in a clinical setting. It prevents a BCR-ABL protein from exerting its role in the oncogenic pathway in chronic myeloid leukemia (CML,",
+        "Ajit Valath Rajasekharan is an engineer at nFerence headquartered in Cambrigde MA",
+        "Ajit:__entity__ Valath Rajasekharan is an engineer:__entity__ at nFerence headquartered in Cambrigde MA",
+        "Ajit:__entity__ Valath:__entity__ Rajasekharan is an engineer:__entity__ at nFerence headquartered in Cambrigde MA",
+        "Ajit:__entity__ Valath:__entity__ Rajasekharan:__entity__ is an engineer:__entity__ at nFerence headquartered in Cambrigde MA",
+        "Ajit Raj is an engineer:__entity__ at nFerence",
+        "Ajit Valath:__entity__ Rajasekharan is an engineer:__entity__ at nFerence headquartered in Cambrigde:__entity__ MA",
+        "Ajit Valath Rajasekharan is an engineer:__entity__ at nFerence headquartered in Cambrigde:__entity__ MA",
+        "Ajit Valath Rajasekharan is an engineer:__entity__ at nFerence headquartered in Cambrigde MA",
+        "Ajit Valath Rajasekharan is an engineer at nFerence headquartered in Cambrigde MA",
+        "Ajit:__entity__ Rajasekharan:__entity__ is an engineer at nFerence:__entity__",
+        "Imatinib mesylate is used to treat non small cell lung cancer",
+        "Imatinib mesylate is used to treat :__entity__",
+        "Imatinib is a term:__entity__",
+        "nsclc is a term:__entity__",
+        "Ajit Rajasekharan is a term:__entity__",
+        "ajit rajasekharan is a term:__entity__",
+        "John Doe is a term:__entity__"
+]
 
-def test(singleton,test):
-    #print(test)
-    out = singleton.get_descriptors(test)
-    #print(out)
-    #with open("debug.txt","w") as fp:
-    #    fp.write(json.dumps(out,indent=4))
-    #pdb.set_trace()
+def test_sentences(singleton,iter_val):
+    with open("debug.txt","w") as fp:
+        for test in iter_val:
+            test = test.rstrip('\n')
+            fp.write(test + "\n")
+            print(test)
+            out = singleton.get_descriptors(test)
+            print(out)
+            fp.write(json.dumps(out,indent=4))
+            print()
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='BERT descriptor service given a sentence. The word to be masked is specified as the special token entity ',formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-model', action="store", dest="model", default=DEFAULT_MODEL_PATH,help='BERT pretrained models, or custom model path')
+    parser.add_argument('-input', action="store", dest="input", default="",help='Optional input file with sentences. If not specified, assumed to be canned sentence run (default behavior)')
     parser.add_argument('-topk', action="store", dest="topk", default=DEFAULT_TOP_K,type=int,help='Number of neighbors to display')
     parser.add_argument('-tolower', dest="tolower", action='store_true',help='Convert tokens to lowercase. Set to True only for uncased models')
     parser.add_argument('-no-tolower', dest="tolower", action='store_false',help='Convert tokens to lowercase. Set to True only for uncased models')
@@ -495,47 +544,15 @@ if __name__ == '__main__':
     try:
         singleton = BatchInference(results.model,results.tolower,results.patched,results.topk,results.abbrev,results.tokmod,results.vocab,results.labels)
         print("To lower casing is set to:",results.tolower)
-        #out = singleton.punct_sentence("Apocalypse is a entity")
-        #print(out)
-        test(singleton,"Fyodor:__entity__ Mikhailovich:__entity__ Dostoevsky:__entity__ was treated for Parkinsons:__entity__ and later died of lung carcinoma")
-        test(singleton,"Fyodor:__entity__ Mikhailovich:__entity__ Dostoevsky:__entity__")
-        test(singleton,"imatinib was used to treat Michael:__entity__ Jackson:__entity__")
-        test(singleton,"Ajit flew to Boston:__entity__")
-        test(singleton,"Ajit:__entity__ flew to Boston")
-        test(singleton,"A eGFR below 60:__entity__ indicates chronic kidney disease")
-        test(singleton,"imatinib was used to treat Michael Jackson")
-        test(singleton,"Ajit Valath:__entity__ Rajasekharan is an engineer at nFerence headquartered in Cambrigde MA")
-        test(singleton,"imatinib:__entity__")
-        test(singleton,"imatinib")
-        test(singleton,"iplimumab:__entity__")
-        test(singleton,"iplimumab")
-        test(singleton,"engineer:__entity__")
-        test(singleton,"engineer")
-        test(singleton,"Complications include peritonsillar:__entity__ abscess::__entity__")
-        test(singleton,"Imatinib was the first signal transduction inhibitor (STI), used in a clinical setting. It prevents a BCR-ABL protein from exerting its role in the oncogenic pathway in chronic:__entity__ myeloid:__entity__ leukemia:__entity__ (CML)")
-        test(singleton,"Imatinib was the first signal transduction inhibitor (STI), used in a clinical setting. It prevents a BCR-ABL protein from exerting its role in the oncogenic pathway in chronic myeloid leukemia (CML)")
-        test(singleton,"Imatinib was the first signal transduction inhibitor (STI), used in a clinical setting. It prevents a BCR-ABL protein from exerting its role in the oncogenic pathway in chronic:__entity__ myeloid:___entity__ leukemia:__entity__ (CML)")
-        test(singleton,"Ajit Rajasekharan is an engineer:__entity__ at nFerence:__entity__")
-        test(singleton,"Imatinib was the first signal transduction inhibitor (STI), used in a clinical setting. It prevents a BCR-ABL protein from exerting its role in the oncogenic pathway in chronic myeloid leukemia (CML)")
-        test(singleton,"Ajit:__entity__ Rajasekharan:__entity__ is an engineer")
-        test(singleton,"Imatinib:__entity__ was the first signal transduction inhibitor (STI), used in a clinical setting. It prevents a BCR-ABL protein from exerting its role in the oncogenic pathway in chronic myeloid leukemia (CML)")
-        test(singleton,"Ajit Valath Rajasekharan is an engineer at nFerence headquartered in Cambrigde MA")
-        test(singleton,"Ajit:__entity__ Valath Rajasekharan is an engineer:__entity__ at nFerence headquartered in Cambrigde MA")
-        test(singleton,"Ajit:__entity__ Valath:__entity__ Rajasekharan is an engineer:__entity__ at nFerence headquartered in Cambrigde MA")
-        test(singleton,"Ajit:__entity__ Valath:__entity__ Rajasekharan:__entity__ is an engineer:__entity__ at nFerence headquartered in Cambrigde MA")
-        test(singleton,"Ajit Raj is an engineer:__entity__ at nFerence")
-        test(singleton,"Ajit Valath:__entity__ Rajasekharan is an engineer:__entity__ at nFerence headquartered in Cambrigde:__entity__ MA")
-        test(singleton,"Ajit Valath Rajasekharan is an engineer:__entity__ at nFerence headquartered in Cambrigde:__entity__ MA")
-        test(singleton,"Ajit Valath Rajasekharan is an engineer:__entity__ at nFerence headquartered in Cambrigde MA")
-        test(singleton,"Ajit Valath Rajasekharan is an engineer at nFerence headquartered in Cambrigde MA")
-        test(singleton,"Ajit:__entity__ Rajasekharan:__entity__ is an engineer at nFerence:__entity__")
-        test(singleton,"Imatinib mesylate is used to treat non small cell lung cancer")
-        test(singleton,"Imatinib mesylate is used to treat :__entity__")
-        test(singleton,"Imatinib is a term:__entity__")
-        test(singleton,"nsclc is a term:__entity__")
-        test(singleton,"Ajit Rajasekharan is a term:__entity__")
-        test(singleton,"ajit rajasekharan is a term:__entity__")
-        test(singleton,"John Doe is a term:__entity__")
+        if (len(results.input) == 0):
+            print("Canned test mode")
+            test_sentences(singleton,test_arr)
+        else:
+            print("Batch file test mode")
+            fp = open(results.input)
+            test_sentences(singleton,fp)
+                
     except:
         print("Unexpected error:", sys.exc_info()[0])
         traceback.print_exc(file=sys.stdout)
+
