@@ -446,7 +446,8 @@ class BatchInference:
                             if (self.log_descs):
                                 self.ci_fp.write(index + " " + entity + " " +  entity_count + " " + str(round(float(sorted_d[index]),4)) +  "\n")
                             curr_sent_arr.append({"desc":index,"e":entity,"e_count":entity_count,"v":str(round(float(sorted_d[index]),4))})
-                            if (index != "two" and not index.startswith("#")  and not all_sentences_arr[sent_index].strip().startswith("is ")):
+                            #if (index != "two" and not index.startswith("#")  and not all_sentences_arr[sent_index].strip().startswith("is ")):
+                            if (index != "two" and not all_sentences_arr[sent_index].strip().startswith("is ")):
                                 self.always_log_fp.write(' '.join(all_sentences_arr[sent_index].split()[:-1]) + " " + index + " :__entity__\n")
                         k += 1
                         if (k >= top_k):
