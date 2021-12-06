@@ -14,8 +14,8 @@ TOLOWER = False
 PATCHED = False
 TOPK = 20
 ABBREV = True
-#Tok mod is no longer need to be set now since we use subwords too for prediction. so set to false
-TOKMOD = False
+#Tok mod is helpful despite using subwords
+TOKMOD = True
 VOCAB="./"
 
 singleton = None

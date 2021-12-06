@@ -312,7 +312,8 @@ class BatchInference:
                 5) Return json of descriptors for the ooriginal sentence as well as all CI sentences
         '''
         #This is a modification of input text to words in vocab that match it in case insensitive manner. 
-        #This is no longer required when we are using subwords too for prediction.
+        #This is *STILL* required when we are using subwords too for prediction. The prediction quality is still better.
+        #An example is Mesothelioma is caused by exposure to asbestos. The quality of prediction is better when Mesothelioma is not split by lowercasing with A100 model
         if (self.tokmod):
             sent = self.modify_text_to_match_vocab(sent)
 
@@ -466,6 +467,7 @@ class BatchInference:
 
 
 test_arr = [
+        "Mesothelioma is caused by exposure to asbestos:__entity__",
         "Asbestos is a highly :__entity__",
         "Fyodor:__entity__ Mikhailovich:__entity__ Dostoevsky:__entity__ was treated for Parkinsons:__entity__ and later died of lung carcinoma",
         "Fyodor:__entity__ Mikhailovich:__entity__ Dostoevsky:__entity__",
@@ -539,7 +541,7 @@ if __name__ == '__main__':
     parser.set_defaults(tolower=False)
     parser.set_defaults(patched=False)
     parser.set_defaults(abbrev=True)
-    parser.set_defaults(tokmod=False)
+    parser.set_defaults(tokmod=True)
 
     results = parser.parse_args()
     try:
