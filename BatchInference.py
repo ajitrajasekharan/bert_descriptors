@@ -230,6 +230,8 @@ class BatchInference:
                     if (i != "%s"):
                         singleton_span.append(0)
                 entity = self.masked_word_first_letter_capitalize(entity)
+                if (self.tokmod):
+                    entity = self.modify_text_to_match_vocab(entity)
                 sentence = sentence_template % entity
                 sentences.append(sentence)
                 singleton_spans_arr.append(singleton_span)
@@ -393,10 +395,11 @@ class BatchInference:
                 for word in range(len(tokenized_text_arr[sent_index])):
                     if (word == len(tokenized_text_arr[sent_index]) - 1): # SEP is  skipped for CI and CS
                         continue
-                    #if (sent_index != 0 and (word != 0 and word != len(orig_tokenized_length_arr[sent_index]) - 2)): #For all CI sentences pick only the neighbors of CLS and the last word of the sentence (X is a entity)
-                    if (sent_index %2 == 0 and (word != 0 and word != len(orig_tokenized_length_arr[sent_index]) - 2) and word != len(orig_tokenized_length_arr[sent_index]) - 3): #For all CI sentences - just pick CLS, "a" and "entity"
-                    #if (sent_index != 0 and (word != 0 and (word == len(orig_tokenized_length_arr[sent_index]) - 4))): #For all CI sentences pick ALL terms excluding "is" in "X is a entity"
+                    if (sent_index %2 == 0 and (word != 0 and word != len(orig_tokenized_length_arr[sent_index]) - 2)): #For all CI sentences pick only the neighbors of CLS and the last word of the sentence (X is a entity)
+                    #if (sent_index %2 == 0 and (word != 0 and word != len(orig_tokenized_length_arr[sent_index]) - 2) and word != len(orig_tokenized_length_arr[sent_index]) - 3): #For all CI sentences - just pick CLS, "a" and "entity"
+                    #if (sent_index %2 == 0 and (word != 0 and (word == len(orig_tokenized_length_arr[sent_index]) - 4))): #For all CI sentences pick ALL terms excluding "is" in "X is a entity"
                         continue
+
                     if (sent_index %2 != 0 and tokenized_text_arr[sent_index][word] != "[MASK]"): # for all CS sentences skip all terms except the mask position
                         continue
 
@@ -420,7 +423,10 @@ class BatchInference:
                     #print("********* Top predictions for token: ",tokenized_text_arr[sent_index][word])
                     if (self.log_descs):
                         fp.write("********* Top predictions for token: " + tokenized_text_arr[sent_index][word] + "\n")
-                    top_k = self.top_k
+                    if (sent_index %2 == 0): #For CI sentences, just pick half for CLS and entity position to match with CS counts
+                        top_k = self.top_k/2
+                    else:
+                        top_k = self.top_k
                     for index in sorted_d:
                         #if (index in string.punctuation or index.startswith('##') or len(index) == 1 or index.startswith('.') or index.startswith('[')):
                         if index.lower() in self.descs:
@@ -467,6 +473,7 @@ class BatchInference:
 
 
 test_arr = [
+        "mesothelioma is caused by exposure to organic :__entity__",
         "Mesothelioma is caused by exposure to asbestos:__entity__",
         "Asbestos is a highly :__entity__",
         "Fyodor:__entity__ Mikhailovich:__entity__ Dostoevsky:__entity__ was treated for Parkinsons:__entity__ and later died of lung carcinoma",
@@ -519,7 +526,9 @@ def test_sentences(singleton,iter_val):
             out = singleton.get_descriptors(test)
             print(out)
             fp.write(json.dumps(out,indent=4))
+            fp.flush()
             print()
+            pdb.set_trace()
 
 
 if __name__ == '__main__':
