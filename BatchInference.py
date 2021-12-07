@@ -295,13 +295,30 @@ class BatchInference:
         return ret_label,ret_counts
 
     #This is just a trivial hack for consistency of CI prediction of numbers
-    def override_ci_number_predictions(self,masked_sent):                                                                                                                                                                                                          
-        words = masked_sent.split()                                                                                                                                                                                                                        
-        words_count = len(words)                                                                                                                                                                                                                           
-        if (len(words) == 4 and words[words_count-1] == "entity" and words[words_count -2] == "a" and words[words_count -3] == "is"  and words[0].isnumeric()): #only integers skipped                                                                     
-            return True                                                                                                                                                                                                                               
-        else:                                                                                                                                                                                                                                              
+    def override_ci_number_predictions(self,masked_sent):
+        words = masked_sent.split()
+        words_count = len(words)
+        if (len(words) == 4 and words[words_count-1] == "entity" and words[words_count -2] == "a" and words[words_count -3] == "is"  and words[0].isnumeric()): #only integers skipped
+            return True
+        else:
             return False
+
+
+
+    def normalize_sent(self,sent):
+        normalized_tokens = "!\"%'(),.;?[]`{}"
+        end_tokens = "!,.:;?"
+        print(sent)
+        sent = sent.rstrip()
+        if (len(sent) > 1):
+            for i in range(len(normalized_tokens)):
+                sent = sent.replace(normalized_tokens[i],' ' + normalized_tokens[i] + ' ')
+            if (not sent.endswith(":__entity__")):
+                last_char = sent[-1]
+                if (last_char not in end_tokens): #End all sentences with a period if not already present in sentence.
+                    sent = sent + ' . '
+        print(sent)
+        return sent
                                
 
     def get_descriptors(self,sent):
@@ -318,6 +335,9 @@ class BatchInference:
         #An example is Mesothelioma is caused by exposure to asbestos. The quality of prediction is better when Mesothelioma is not split by lowercasing with A100 model
         if (self.tokmod):
             sent = self.modify_text_to_match_vocab(sent)
+
+        #The input sentence is normalized. Specifically all input ist terminated with a punctuation if not already present. Also some of the punctuation marks are separated from text if glued to a word
+        sent = self.normalize_sent(sent)
 
         #Step 1. Find entities to tag if user did not explicitly tag terms
         #All noun phrases are tagged for prediction
