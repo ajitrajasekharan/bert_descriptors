@@ -308,16 +308,16 @@ class BatchInference:
     def normalize_sent(self,sent):
         normalized_tokens = "!\"%'(),.;?[]`{}"
         end_tokens = "!,.:;?"
-        print(sent)
         sent = sent.rstrip()
         if (len(sent) > 1):
             for i in range(len(normalized_tokens)):
                 sent = sent.replace(normalized_tokens[i],' ' + normalized_tokens[i] + ' ')
+            sent = sent.rstrip()
             if (not sent.endswith(":__entity__")):
                 last_char = sent[-1]
                 if (last_char not in end_tokens): #End all sentences with a period if not already present in sentence.
                     sent = sent + ' . '
-        print(sent)
+        print("Normalized sent",sent)
         return sent
                                
 
@@ -493,6 +493,7 @@ class BatchInference:
 
 
 test_arr = [
+        "imatinib was used to treat Michael Jackson . ",
         "mesothelioma is caused by exposure to organic :__entity__",
         "Mesothelioma is caused by exposure to asbestos:__entity__",
         "Asbestos is a highly :__entity__",
