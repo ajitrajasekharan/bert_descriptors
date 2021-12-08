@@ -26,6 +26,7 @@ DEFAULT_LABELS_PATH='./labels.txt'
 DEFAULT_TO_LOWER=False
 DESC_FILE="./common_descs.txt"
 SPECIFIC_TAG=":__entity__"
+MAX_TOKENIZED_SENT_LENGTH = 500 #additional buffer for CLS SEP and entity term
 
 try:
     from subprocess import DEVNULL  # Python 3.
@@ -320,6 +321,15 @@ class BatchInference:
         print("Normalized sent",sent)
         return sent
                                
+    def truncate_sent_if_too_long(self,text):
+       while (True):
+           tok_text = '[CLS] ' + text + ' [SEP]'
+           tokenized_text = self.tokenizer.tokenize(tok_text)
+           if (len(tokenized_text) < MAX_TOKENIZED_SENT_LENGTH):
+                break
+           text = ' '.join(text.split()[:-1])
+       return text
+            
 
     def get_descriptors(self,sent):
         '''
@@ -330,6 +340,8 @@ class BatchInference:
                 4) Perform inference on batch 
                 5) Return json of descriptors for the ooriginal sentence as well as all CI sentences
         '''
+        #Truncate sent if the tokenized sent is longer than max sent length
+        sent = self.truncate_sent_if_too_long(sent)
         #This is a modification of input text to words in vocab that match it in case insensitive manner. 
         #This is *STILL* required when we are using subwords too for prediction. The prediction quality is still better.
         #An example is Mesothelioma is caused by exposure to asbestos. The quality of prediction is better when Mesothelioma is not split by lowercasing with A100 model
@@ -391,6 +403,7 @@ class BatchInference:
         # Convert inputs to PyTorch tensors
         tokens_tensor = torch.tensor(indexed_tokens_arr)
         attention_tensors = torch.tensor(attention_mask_arr)
+
 
         print("Input:",sent)
         ret_obj = OrderedDict()
@@ -493,7 +506,9 @@ class BatchInference:
 
 
 test_arr = [
+        "Coronavirus:__entity__ disease 2019 (COVID-19) is a contagious disease caused by severe acute respiratory syndrome coronavirus 2 (SARS-CoV-2). The first known case was identified in Wuhan, China, in December 2019.[7] The disease has since spread worldwide, leading to an ongoing pandemic.[8]Symptoms of COVID-19 are variable, but often include fever,[9] cough, headache,[10] fatigue, breathing difficulties, and loss of smell and taste.[11][12][13] Symptoms may begin one to fourteen days after exposure to the virus. At least a third of people who are infected do not develop noticeable symptoms.[14] Of those people who develop symptoms noticeable enough to be classed as patients, most (81%) develop mild to moderate symptoms (up to mild pneumonia), while 14% develop severe symptoms (dyspnea, hypoxia, or more than 50% lung involvement on imaging), and 5% suffer critical symptoms (respiratory failure, shock, or multiorgan dysfunction).[15] Older people are at a higher risk of developing severe symptoms. Some people continue to experience a range of effects (long COVID) for months after recovery, and damage to organs has been observed.[16] Multi-year studies are underway to further investigate the long-term effects of the disease.[16]COVID-19 transmits when people breathe in air contaminated by droplets and small airborne particles containing the virus. The risk of breathing these in is highest when people are in close proximity, but they can be inhaled over longer distances, particularly indoors. Transmission can also occur if splashed or sprayed with contaminated fluids in the eyes, nose or mouth, and, rarely, via contaminated surfaces. People remain contagious for up to 20 days, and can spread the virus even if they do not develop symptoms.[17][18]Several testing methods have been developed to diagnose the disease. The standard diagnostic method is by detection of the virus' nucleic acid by real-time reverse transcription polymerase chain reaction (rRT-PCR), transcription-mediated amplification (TMA), or by reverse transcription loop-mediated isothermal amplification (RT-LAMP) from a nasopharyngeal swab.Several COVID-19 vaccines have been approved and distributed in various countries, which have initiated mass vaccination campaigns. Other preventive measures include physical or social distancing, quarantining, ventilation of indoor spaces, covering coughs and sneezes, hand washing, and keeping unwashed hands away from the face. The use of face masks or coverings has been recommended in public settings to minimize the risk of transmissions. While work is underway to develop drugs that inhibit the virus, the primary treatment is symptomatic. Management involves the treatment of symptoms, supportive care, isolation, and experimental measures.",
         "imatinib was used to treat Michael Jackson . ",
+        "eg  .",
         "mesothelioma is caused by exposure to organic :__entity__",
         "Mesothelioma is caused by exposure to asbestos:__entity__",
         "Asbestos is a highly :__entity__",
