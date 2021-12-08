@@ -24,6 +24,7 @@ def generate_masked_sentences(terms_arr):
     sentence_arr = []
     span_arr = []
     i = 0
+    hack_for_no_nouns_case(terms_arr)
     while (i < size):
         term_info = terms_arr[i]
         if (term_info[TAG_POS] in noun_tags):
@@ -36,6 +37,26 @@ def generate_masked_sentences(terms_arr):
             span_arr.append(0)
     #print(sentence_arr)
     return sentence_arr,span_arr
+
+def hack_for_no_nouns_case(terms_arr):
+    '''
+        This is just a hack for case user enters a sentence with no entity to be tagged specifically and the sentence has no nouns
+        Happens for odd inputs like a single word like "eg" etc.
+        Just make the first term as a noun to proceed. 
+    '''
+    size = len(terms_arr)
+    i = 0
+    found = False
+    while (i < size):
+        term_info = terms_arr[i]
+        if (term_info[TAG_POS] in noun_tags):
+               found = True
+               break
+        else:
+            i += 1
+    if (not found and len(terms_arr) > 1):
+        term_info = terms_arr[0]
+        term_info[TAG_POS] =  noun_tags[0]
 
 
 def gen_sentence(sentence_arr,terms_arr,index):
