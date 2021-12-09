@@ -473,7 +473,7 @@ class BatchInference:
                             if (self.log_descs):
                                 self.cs_fp.write(index + " " + entity +  " " +  entity_count + " " + str(round(float(sorted_d[index]),4)) + "\n")
                             curr_sent_arr.append({"desc":index,"e":entity,"e_count":entity_count,"v":str(round(float(sorted_d[index]),4))})
-                            if (all_sentences_arr[sent_index].strip().endswith("entity")):
+                            if (all_sentences_arr[sent_index].strip().rstrip(".").strip().endswith("entity")):
                                 self.always_log_fp.write(' '.join(all_sentences_arr[sent_index].split()[:-1]) + " " + index + " :__entity__\n")
                         else:
                             #CI predictions of the form X is a entity
@@ -506,6 +506,8 @@ class BatchInference:
 
 
 test_arr = [
+        "I met my best friend at eighteen :__entity__",
+        "I met my best friend at Parkinson's",
         "e",
         "Bandolier - Budgie ' , a free itunes app for ipad , iphone and ipod touch , released in December 2011 , tells the story of the making of Bandolier in the band 's own words - including an extensive audio interview with Burke Shelley",
         "The portfolio manager of the new cryptocurrency firm underwent a bone marrow biopsy: for AML:__entity__:",
