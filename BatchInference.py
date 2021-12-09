@@ -132,6 +132,12 @@ class BatchInference:
         self.abbrev = abbrev
         self.tokmod  = tokmod
         self.always_log_fp = open("CI_LOGS.txt","a")
+        if (cf.read_config()["USE_CLS"] == "1"): #Models like Bert base cased return same prediction for CLS regardless of input. So ignore CLS
+            print("************** USE CLS: Turned ON for this model. ******* ")
+            self.use_cls = True
+        else:
+            print("************** USE CLS: Turned OFF for this model. ******* ")
+            self.use_cls = False
         if (cf.read_config()["LOG_DESCS"] == "1"):
             self.log_descs = True
             self.ci_fp = open("log_ci_predictions.txt","w")
@@ -272,6 +278,7 @@ class BatchInference:
     def find_entity(self,word):
         entities = self.labels_dict
         lc_entities = self.lc_labels_dict
+        in_vocab = False
         #words = self.filter_glue_words(words) #do not filter glue words anymore. Let them pass through
         l_word = word.lower()
         if l_word.isdigit():
@@ -280,12 +287,15 @@ class BatchInference:
         elif (word in entities):
             ret_label = entities[word]["label"]
             ret_counts = entities[word]["counts"]
+            in_vocab = True
         elif (l_word in entities):
             ret_label = entities[l_word]["label"]
             ret_counts = entities[l_word]["counts"]
+            in_vocab = True
         elif (l_word in lc_entities):
             ret_label = lc_entities[l_word]["label"]
             ret_counts = lc_entities[l_word]["counts"]
+            in_vocab = True
         else:
             ret_label = "OTHER"
             ret_counts = "1"
@@ -293,16 +303,25 @@ class BatchInference:
             ret_label = "UNTAGGED_ENTITY"
             ret_counts = "1"
         #print(word,ret_label,ret_counts)
-        return ret_label,ret_counts
+        return ret_label,ret_counts,in_vocab
 
     #This is just a trivial hack for consistency of CI prediction of numbers
     def override_ci_number_predictions(self,masked_sent):
         words = masked_sent.split()
         words_count = len(words)
         if (len(words) == 4 and words[words_count-1] == "entity" and words[words_count -2] == "a" and words[words_count -3] == "is"  and words[0].isnumeric()): #only integers skipped
-            return True
+            return True,"two","1","NUMBER"
         else:
-            return False
+            return False,"","",""
+
+    def override_ci_for_vocab_terms(self,masked_sent):
+        words = masked_sent.split()
+        words_count = len(words)
+        if (len(words) == 4 and words[words_count-1] == "entity" and words[words_count -2] == "a" and words[words_count -3] == "is"):
+            entity,entity_count,in_vocab = self.find_entity(words[0])
+            if (in_vocab):
+                return True,words[0],entity_count,entity
+        return False,"","",""
 
 
 
@@ -432,6 +451,8 @@ class BatchInference:
                     #if (sent_index %2 == 0 and (word != 0 and word != len(orig_tokenized_length_arr[sent_index]) - 2) and word != len(orig_tokenized_length_arr[sent_index]) - 3): #For all CI sentences - just pick CLS, "a" and "entity"
                     #if (sent_index %2 == 0 and (word != 0 and (word == len(orig_tokenized_length_arr[sent_index]) - 4))): #For all CI sentences pick ALL terms excluding "is" in "X is a entity"
                         continue
+                    if (sent_index %2 == 0 and (word == 0 and not self.use_cls)): #This is for models like bert base cased where we cant use CLS - it is the same for all words. 
+                        continue
 
                     if (sent_index %2 != 0 and tokenized_text_arr[sent_index][word] != "[MASK]"): # for all CS sentences skip all terms except the mask position
                         continue
@@ -457,19 +478,23 @@ class BatchInference:
                     if (self.log_descs):
                         fp.write("********* Top predictions for token: " + tokenized_text_arr[sent_index][word] + "\n")
                     if (sent_index %2 == 0): #For CI sentences, just pick half for CLS and entity position to match with CS counts
-                        top_k = self.top_k/2
+                        if (self.use_cls): #If we are not using [CLS] for models like BBC, then take all top k from the entity prediction 
+                            top_k = self.top_k/2
+                        else:
+                            top_k = self.top_k
                     else:
                         top_k = self.top_k
+                    #Looping through each descriptor prediction for a position and picking it up subject to some conditions
                     for index in sorted_d:
                         #if (index in string.punctuation or index.startswith('##') or len(index) == 1 or index.startswith('.') or index.startswith('[')):
-                        if index.lower() in self.descs:
+                        if index.lower() in self.descs: #these have almost no entity info - glue words like "the","a"
                             continue
                         if (index in string.punctuation  or len(index) == 1 or index.startswith('.') or index.startswith('[')):
                             continue
                         #print(index,round(float(sorted_d[index]),4))
                         if (sent_index % 2 != 0):
                             #CS predictions
-                            entity,entity_count = self.find_entity(index)
+                            entity,entity_count,dummy = self.find_entity(index)
                             if (self.log_descs):
                                 self.cs_fp.write(index + " " + entity +  " " +  entity_count + " " + str(round(float(sorted_d[index]),4)) + "\n")
                             curr_sent_arr.append({"desc":index,"e":entity,"e_count":entity_count,"v":str(round(float(sorted_d[index]),4))})
@@ -477,12 +502,19 @@ class BatchInference:
                                 self.always_log_fp.write(' '.join(all_sentences_arr[sent_index].split()[:-1]) + " " + index + " :__entity__\n")
                         else:
                             #CI predictions of the form X is a entity
-                            entity,entity_count = self.find_entity(index)
-                            override = self.override_ci_number_predictions(all_sentences_arr[sent_index])
-                            if (override):
-                               index = "two"
-                               entity_count = "1"
-                               entity = "NUMBER"
+                            entity,entity_count,dummy = self.find_entity(index) #index is one of  the predicted descs for the [CLS]/[MASK] psition
+                            number_override,override_index,override_entity_count,override_entity = self.override_ci_number_predictions(all_sentences_arr[sent_index]) #Note this override just uses the sentence to override all descs
+                            if (number_override): #note the prediction for this position still takes the prediction float values model returns
+                               index = override_index
+                               entity_count = override_entity_count
+                               entity = override_entity
+                            else:
+                                override,override_index,override_entity_count,override_entity = self.override_ci_for_vocab_terms(all_sentences_arr[sent_index]) #this also uses the sentence to override, ignoring descs, except reusing the prediction score
+                                if (override): #note the prediction for this position still takes the prediction float values model returns
+                                    index = override_index
+                                    entity_count = override_entity_count
+                                    entity = override_entity
+                        
                             if (self.log_descs):
                                 self.ci_fp.write(index + " " + entity + " " +  entity_count + " " + str(round(float(sorted_d[index]),4)) +  "\n")
                             curr_sent_arr.append({"desc":index,"e":entity,"e_count":entity_count,"v":str(round(float(sorted_d[index]),4))})
@@ -506,6 +538,12 @@ class BatchInference:
 
 
 test_arr = [
+        "Imatinib:__entity__ is used to treat nsclc",
+        "imatinib:__entity__ is used to treat nsclc",
+        "imatinib:__entity__ mesylate:__entity__ is used to treat nsclc",
+        "The conditions:__entity__ in the camp were very poor",
+        "Staten is a :__entity__",
+        "John is a :__entity__",
         "I met my best friend at eighteen :__entity__",
         "I met my best friend at Parkinson's",
         "e",
