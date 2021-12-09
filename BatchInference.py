@@ -509,11 +509,12 @@ class BatchInference:
                                entity_count = override_entity_count
                                entity = override_entity
                             else:
-                                override,override_index,override_entity_count,override_entity = self.override_ci_for_vocab_terms(all_sentences_arr[sent_index]) #this also uses the sentence to override, ignoring descs, except reusing the prediction score
-                                if (override): #note the prediction for this position still takes the prediction float values model returns
-                                    index = override_index
-                                    entity_count = override_entity_count
-                                    entity = override_entity
+                                if (not self.use_cls or word != 0):
+                                    override,override_index,override_entity_count,override_entity = self.override_ci_for_vocab_terms(all_sentences_arr[sent_index]) #this also uses the sentence to override, ignoring descs, except reusing the prediction score
+                                    if (override): #note the prediction for this position still takes the prediction float values model returns
+                                        index = override_index
+                                        entity_count = override_entity_count
+                                        entity = override_entity
                         
                             if (self.log_descs):
                                 self.ci_fp.write(index + " " + entity + " " +  entity_count + " " + str(round(float(sorted_d[index]),4)) +  "\n")
@@ -538,112 +539,113 @@ class BatchInference:
 
 
 test_arr = [
+       "The conditions:__entity__ in the camp were very poor",
         "Imatinib:__entity__ is used to treat nsclc",
         "imatinib:__entity__ is used to treat nsclc",
         "imatinib:__entity__ mesylate:__entity__ is used to treat nsclc",
-        "The conditions:__entity__ in the camp were very poor",
-        "Staten is a :__entity__",
-        "John is a :__entity__",
-        "I met my best friend at eighteen :__entity__",
-        "I met my best friend at Parkinson's",
-        "e",
-        "Bandolier - Budgie ' , a free itunes app for ipad , iphone and ipod touch , released in December 2011 , tells the story of the making of Bandolier in the band 's own words - including an extensive audio interview with Burke Shelley",
-        "The portfolio manager of the new cryptocurrency firm underwent a bone marrow biopsy: for AML:__entity__:",
-        "Coronavirus:__entity__ disease 2019 (COVID-19) is a contagious disease caused by severe acute respiratory syndrome coronavirus 2 (SARS-CoV-2). The first known case was identified in Wuhan, China, in December 2019.[7] The disease has since spread worldwide, leading to an ongoing pandemic.[8]Symptoms of COVID-19 are variable, but often include fever,[9] cough, headache,[10] fatigue, breathing difficulties, and loss of smell and taste.[11][12][13] Symptoms may begin one to fourteen days after exposure to the virus. At least a third of people who are infected do not develop noticeable symptoms.[14] Of those people who develop symptoms noticeable enough to be classed as patients, most (81%) develop mild to moderate symptoms (up to mild pneumonia), while 14% develop severe symptoms (dyspnea, hypoxia, or more than 50% lung involvement on imaging), and 5% suffer critical symptoms (respiratory failure, shock, or multiorgan dysfunction).[15] Older people are at a higher risk of developing severe symptoms. Some people continue to experience a range of effects (long COVID) for months after recovery, and damage to organs has been observed.[16] Multi-year studies are underway to further investigate the long-term effects of the disease.[16]COVID-19 transmits when people breathe in air contaminated by droplets and small airborne particles containing the virus. The risk of breathing these in is highest when people are in close proximity, but they can be inhaled over longer distances, particularly indoors. Transmission can also occur if splashed or sprayed with contaminated fluids in the eyes, nose or mouth, and, rarely, via contaminated surfaces. People remain contagious for up to 20 days, and can spread the virus even if they do not develop symptoms.[17][18]Several testing methods have been developed to diagnose the disease. The standard diagnostic method is by detection of the virus' nucleic acid by real-time reverse transcription polymerase chain reaction (rRT-PCR), transcription-mediated amplification (TMA), or by reverse transcription loop-mediated isothermal amplification (RT-LAMP) from a nasopharyngeal swab.Several COVID-19 vaccines have been approved and distributed in various countries, which have initiated mass vaccination campaigns. Other preventive measures include physical or social distancing, quarantining, ventilation of indoor spaces, covering coughs and sneezes, hand washing, and keeping unwashed hands away from the face. The use of face masks or coverings has been recommended in public settings to minimize the risk of transmissions. While work is underway to develop drugs that inhibit the virus, the primary treatment is symptomatic. Management involves the treatment of symptoms, supportive care, isolation, and experimental measures.",
-        "imatinib was used to treat Michael Jackson . ",
-        "eg  .",
-        "mesothelioma is caused by exposure to organic :__entity__",
-        "Mesothelioma is caused by exposure to asbestos:__entity__",
-        "Asbestos is a highly :__entity__",
-        "Fyodor:__entity__ Mikhailovich:__entity__ Dostoevsky:__entity__ was treated for Parkinsons:__entity__ and later died of lung carcinoma",
-        "Fyodor:__entity__ Mikhailovich:__entity__ Dostoevsky:__entity__",
-        "imatinib was used to treat Michael:__entity__ Jackson:__entity__",
-        "Ajit flew to Boston:__entity__",
-        "Ajit:__entity__ flew to Boston",
-        "A eGFR below 60:__entity__ indicates chronic kidney disease",
-        "imatinib was used to treat Michael Jackson",
-        "Ajit Valath:__entity__ Rajasekharan is an engineer at nFerence headquartered in Cambrigde MA",
-        "imatinib:__entity__",
-        "imatinib",
-        "iplimumab:__entity__",
-        "iplimumab",
-        "engineer:__entity__",
-        "engineer",
-        "Complications include peritonsillar:__entity__ abscess::__entity__",
-        "Imatinib was the first signal transduction inhibitor (STI,, used in a clinical setting. It prevents a BCR-ABL protein from exerting its role in the oncogenic pathway in chronic:__entity__ myeloid:__entity__ leukemia:__entity__ (CML,",
-        "Imatinib was the first signal transduction inhibitor (STI,, used in a clinical setting. It prevents a BCR-ABL protein from exerting its role in the oncogenic pathway in chronic myeloid leukemia (CML,",
-        "Imatinib was the first signal transduction inhibitor (STI,, used in a clinical setting. It prevents a BCR-ABL protein from exerting its role in the oncogenic pathway in chronic:__entity__ myeloid:___entity__ leukemia:__entity__ (CML,",
-        "Ajit Rajasekharan is an engineer:__entity__ at nFerence:__entity__",
-        "Imatinib was the first signal transduction inhibitor (STI,, used in a clinical setting. It prevents a BCR-ABL protein from exerting its role in the oncogenic pathway in chronic myeloid leukemia (CML,",
-        "Ajit:__entity__ Rajasekharan:__entity__ is an engineer",
-        "Imatinib:__entity__ was the first signal transduction inhibitor (STI,, used in a clinical setting. It prevents a BCR-ABL protein from exerting its role in the oncogenic pathway in chronic myeloid leukemia (CML,",
-        "Ajit Valath Rajasekharan is an engineer at nFerence headquartered in Cambrigde MA",
-        "Ajit:__entity__ Valath Rajasekharan is an engineer:__entity__ at nFerence headquartered in Cambrigde MA",
-        "Ajit:__entity__ Valath:__entity__ Rajasekharan is an engineer:__entity__ at nFerence headquartered in Cambrigde MA",
-        "Ajit:__entity__ Valath:__entity__ Rajasekharan:__entity__ is an engineer:__entity__ at nFerence headquartered in Cambrigde MA",
-        "Ajit Raj is an engineer:__entity__ at nFerence",
-        "Ajit Valath:__entity__ Rajasekharan is an engineer:__entity__ at nFerence headquartered in Cambrigde:__entity__ MA",
-        "Ajit Valath Rajasekharan is an engineer:__entity__ at nFerence headquartered in Cambrigde:__entity__ MA",
-        "Ajit Valath Rajasekharan is an engineer:__entity__ at nFerence headquartered in Cambrigde MA",
-        "Ajit Valath Rajasekharan is an engineer at nFerence headquartered in Cambrigde MA",
-        "Ajit:__entity__ Rajasekharan:__entity__ is an engineer at nFerence:__entity__",
-        "Imatinib mesylate is used to treat non small cell lung cancer",
-        "Imatinib mesylate is used to treat :__entity__",
-        "Imatinib is a term:__entity__",
-        "nsclc is a term:__entity__",
-        "Ajit Rajasekharan is a term:__entity__",
-        "ajit rajasekharan is a term:__entity__",
-        "John Doe is a term:__entity__"
+       "Staten is a :__entity__",
+       "John is a :__entity__",
+       "I met my best friend at eighteen :__entity__",
+       "I met my best friend at Parkinson's",
+       "e",
+       "Bandolier - Budgie ' , a free itunes app for ipad , iphone and ipod touch , released in December 2011 , tells the story of the making of Bandolier in the band 's own words - including an extensive audio interview with Burke Shelley",
+       "The portfolio manager of the new cryptocurrency firm underwent a bone marrow biopsy: for AML:__entity__:",
+       "Coronavirus:__entity__ disease 2019 (COVID-19) is a contagious disease caused by severe acute respiratory syndrome coronavirus 2 (SARS-CoV-2). The first known case was identified in Wuhan, China, in December 2019.[7] The disease has since spread worldwide, leading to an ongoing pandemic.[8]Symptoms of COVID-19 are variable, but often include fever,[9] cough, headache,[10] fatigue, breathing difficulties, and loss of smell and taste.[11][12][13] Symptoms may begin one to fourteen days after exposure to the virus. At least a third of people who are infected do not develop noticeable symptoms.[14] Of those people who develop symptoms noticeable enough to be classed as patients, most (81%) develop mild to moderate symptoms (up to mild pneumonia), while 14% develop severe symptoms (dyspnea, hypoxia, or more than 50% lung involvement on imaging), and 5% suffer critical symptoms (respiratory failure, shock, or multiorgan dysfunction).[15] Older people are at a higher risk of developing severe symptoms. Some people continue to experience a range of effects (long COVID) for months after recovery, and damage to organs has been observed.[16] Multi-year studies are underway to further investigate the long-term effects of the disease.[16]COVID-19 transmits when people breathe in air contaminated by droplets and small airborne particles containing the virus. The risk of breathing these in is highest when people are in close proximity, but they can be inhaled over longer distances, particularly indoors. Transmission can also occur if splashed or sprayed with contaminated fluids in the eyes, nose or mouth, and, rarely, via contaminated surfaces. People remain contagious for up to 20 days, and can spread the virus even if they do not develop symptoms.[17][18]Several testing methods have been developed to diagnose the disease. The standard diagnostic method is by detection of the virus' nucleic acid by real-time reverse transcription polymerase chain reaction (rRT-PCR), transcription-mediated amplification (TMA), or by reverse transcription loop-mediated isothermal amplification (RT-LAMP) from a nasopharyngeal swab.Several COVID-19 vaccines have been approved and distributed in various countries, which have initiated mass vaccination campaigns. Other preventive measures include physical or social distancing, quarantining, ventilation of indoor spaces, covering coughs and sneezes, hand washing, and keeping unwashed hands away from the face. The use of face masks or coverings has been recommended in public settings to minimize the risk of transmissions. While work is underway to develop drugs that inhibit the virus, the primary treatment is symptomatic. Management involves the treatment of symptoms, supportive care, isolation, and experimental measures.",
+       "imatinib was used to treat Michael Jackson . ",
+       "eg  .",
+       "mesothelioma is caused by exposure to organic :__entity__",
+       "Mesothelioma is caused by exposure to asbestos:__entity__",
+       "Asbestos is a highly :__entity__",
+       "Fyodor:__entity__ Mikhailovich:__entity__ Dostoevsky:__entity__ was treated for Parkinsons:__entity__ and later died of lung carcinoma",
+       "Fyodor:__entity__ Mikhailovich:__entity__ Dostoevsky:__entity__",
+       "imatinib was used to treat Michael:__entity__ Jackson:__entity__",
+       "Ajit flew to Boston:__entity__",
+       "Ajit:__entity__ flew to Boston",
+       "A eGFR below 60:__entity__ indicates chronic kidney disease",
+       "imatinib was used to treat Michael Jackson",
+       "Ajit Valath:__entity__ Rajasekharan is an engineer at nFerence headquartered in Cambrigde MA",
+       "imatinib:__entity__",
+       "imatinib",
+       "iplimumab:__entity__",
+       "iplimumab",
+       "engineer:__entity__",
+       "engineer",
+       "Complications include peritonsillar:__entity__ abscess::__entity__",
+       "Imatinib was the first signal transduction inhibitor (STI,, used in a clinical setting. It prevents a BCR-ABL protein from exerting its role in the oncogenic pathway in chronic:__entity__ myeloid:__entity__ leukemia:__entity__ (CML,",
+       "Imatinib was the first signal transduction inhibitor (STI,, used in a clinical setting. It prevents a BCR-ABL protein from exerting its role in the oncogenic pathway in chronic myeloid leukemia (CML,",
+       "Imatinib was the first signal transduction inhibitor (STI,, used in a clinical setting. It prevents a BCR-ABL protein from exerting its role in the oncogenic pathway in chronic:__entity__ myeloid:___entity__ leukemia:__entity__ (CML,",
+       "Ajit Rajasekharan is an engineer:__entity__ at nFerence:__entity__",
+       "Imatinib was the first signal transduction inhibitor (STI,, used in a clinical setting. It prevents a BCR-ABL protein from exerting its role in the oncogenic pathway in chronic myeloid leukemia (CML,",
+       "Ajit:__entity__ Rajasekharan:__entity__ is an engineer",
+       "Imatinib:__entity__ was the first signal transduction inhibitor (STI,, used in a clinical setting. It prevents a BCR-ABL protein from exerting its role in the oncogenic pathway in chronic myeloid leukemia (CML,",
+       "Ajit Valath Rajasekharan is an engineer at nFerence headquartered in Cambrigde MA",
+       "Ajit:__entity__ Valath Rajasekharan is an engineer:__entity__ at nFerence headquartered in Cambrigde MA",
+       "Ajit:__entity__ Valath:__entity__ Rajasekharan is an engineer:__entity__ at nFerence headquartered in Cambrigde MA",
+       "Ajit:__entity__ Valath:__entity__ Rajasekharan:__entity__ is an engineer:__entity__ at nFerence headquartered in Cambrigde MA",
+       "Ajit Raj is an engineer:__entity__ at nFerence",
+       "Ajit Valath:__entity__ Rajasekharan is an engineer:__entity__ at nFerence headquartered in Cambrigde:__entity__ MA",
+       "Ajit Valath Rajasekharan is an engineer:__entity__ at nFerence headquartered in Cambrigde:__entity__ MA",
+       "Ajit Valath Rajasekharan is an engineer:__entity__ at nFerence headquartered in Cambrigde MA",
+       "Ajit Valath Rajasekharan is an engineer at nFerence headquartered in Cambrigde MA",
+       "Ajit:__entity__ Rajasekharan:__entity__ is an engineer at nFerence:__entity__",
+       "Imatinib mesylate is used to treat non small cell lung cancer",
+       "Imatinib mesylate is used to treat :__entity__",
+       "Imatinib is a term:__entity__",
+       "nsclc is a term:__entity__",
+       "Ajit Rajasekharan is a term:__entity__",
+       "ajit rajasekharan is a term:__entity__",
+       "John Doe is a term:__entity__"
 ]
 
+
 def test_sentences(singleton,iter_val):
-    with open("debug.txt","w") as fp:
-        for test in iter_val:
-            test = test.rstrip('\n')
-            fp.write(test + "\n")
-            print(test)
-            out = singleton.get_descriptors(test)
-            print(out)
-            fp.write(json.dumps(out,indent=4))
-            fp.flush()
-            print()
-            pdb.set_trace()
+   with open("debug.txt","w") as fp:
+       for test in iter_val:
+           test = test.rstrip('\n')
+           fp.write(test + "\n")
+           print(test)
+           out = singleton.get_descriptors(test)
+           print(out)
+           fp.write(json.dumps(out,indent=4))
+           fp.flush()
+           print()
+           pdb.set_trace()
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='BERT descriptor service given a sentence. The word to be masked is specified as the special token entity ',formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-model', action="store", dest="model", default=DEFAULT_MODEL_PATH,help='BERT pretrained models, or custom model path')
-    parser.add_argument('-input', action="store", dest="input", default="",help='Optional input file with sentences. If not specified, assumed to be canned sentence run (default behavior)')
-    parser.add_argument('-topk', action="store", dest="topk", default=DEFAULT_TOP_K,type=int,help='Number of neighbors to display')
-    parser.add_argument('-tolower', dest="tolower", action='store_true',help='Convert tokens to lowercase. Set to True only for uncased models')
-    parser.add_argument('-no-tolower', dest="tolower", action='store_false',help='Convert tokens to lowercase. Set to True only for uncased models')
-    parser.set_defaults(tolower=False)
-    parser.add_argument('-patched', dest="patched", action='store_true',help='Is pytorch code patched to harvest [CLS]')
-    parser.add_argument('-no-patched', dest="patched", action='store_false',help='Is pytorch code patched to harvest [CLS]')
-    parser.add_argument('-abbrev', dest="abbrev", action='store_true',help='Just output pivots - not all neighbors')
-    parser.add_argument('-no-abbrev', dest="abbrev", action='store_false',help='Just output pivots - not all neighbors')
-    parser.add_argument('-tokmod', dest="tokmod", action='store_true',help='Modify input token casings to match vocab - meaningful only for cased models')
-    parser.add_argument('-no-tokmod', dest="tokmod", action='store_false',help='Modify input token casings to match vocab - meaningful only for cased models')
-    parser.add_argument('-vocab', action="store", dest="vocab", default=DEFAULT_MODEL_PATH,help='Path to vocab file. This is required only if tokmod is true')
-    parser.add_argument('-labels', action="store", dest="labels", default=DEFAULT_LABELS_PATH,help='Path to labels file. This returns labels also')
-    parser.set_defaults(tolower=False)
-    parser.set_defaults(patched=False)
-    parser.set_defaults(abbrev=True)
-    parser.set_defaults(tokmod=True)
+   parser = argparse.ArgumentParser(description='BERT descriptor service given a sentence. The word to be masked is specified as the special token entity ',formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+   parser.add_argument('-model', action="store", dest="model", default=DEFAULT_MODEL_PATH,help='BERT pretrained models, or custom model path')
+   parser.add_argument('-input', action="store", dest="input", default="",help='Optional input file with sentences. If not specified, assumed to be canned sentence run (default behavior)')
+   parser.add_argument('-topk', action="store", dest="topk", default=DEFAULT_TOP_K,type=int,help='Number of neighbors to display')
+   parser.add_argument('-tolower', dest="tolower", action='store_true',help='Convert tokens to lowercase. Set to True only for uncased models')
+   parser.add_argument('-no-tolower', dest="tolower", action='store_false',help='Convert tokens to lowercase. Set to True only for uncased models')
+   parser.set_defaults(tolower=False)
+   parser.add_argument('-patched', dest="patched", action='store_true',help='Is pytorch code patched to harvest [CLS]')
+   parser.add_argument('-no-patched', dest="patched", action='store_false',help='Is pytorch code patched to harvest [CLS]')
+   parser.add_argument('-abbrev', dest="abbrev", action='store_true',help='Just output pivots - not all neighbors')
+   parser.add_argument('-no-abbrev', dest="abbrev", action='store_false',help='Just output pivots - not all neighbors')
+   parser.add_argument('-tokmod', dest="tokmod", action='store_true',help='Modify input token casings to match vocab - meaningful only for cased models')
+   parser.add_argument('-no-tokmod', dest="tokmod", action='store_false',help='Modify input token casings to match vocab - meaningful only for cased models')
+   parser.add_argument('-vocab', action="store", dest="vocab", default=DEFAULT_MODEL_PATH,help='Path to vocab file. This is required only if tokmod is true')
+   parser.add_argument('-labels', action="store", dest="labels", default=DEFAULT_LABELS_PATH,help='Path to labels file. This returns labels also')
+   parser.set_defaults(tolower=False)
+   parser.set_defaults(patched=False)
+   parser.set_defaults(abbrev=True)
+   parser.set_defaults(tokmod=True)
 
-    results = parser.parse_args()
-    try:
-        singleton = BatchInference(results.model,results.tolower,results.patched,results.topk,results.abbrev,results.tokmod,results.vocab,results.labels)
-        print("To lower casing is set to:",results.tolower)
-        if (len(results.input) == 0):
-            print("Canned test mode")
-            test_sentences(singleton,test_arr)
-        else:
-            print("Batch file test mode")
-            fp = open(results.input)
-            test_sentences(singleton,fp)
-                
-    except:
-        print("Unexpected error:", sys.exc_info()[0])
-        traceback.print_exc(file=sys.stdout)
+   results = parser.parse_args()
+   try:
+       singleton = BatchInference(results.model,results.tolower,results.patched,results.topk,results.abbrev,results.tokmod,results.vocab,results.labels)
+       print("To lower casing is set to:",results.tolower)
+       if (len(results.input) == 0):
+           print("Canned test mode")
+           test_sentences(singleton,test_arr)
+       else:
+           print("Batch file test mode")
+           fp = open(results.input)
+           test_sentences(singleton,fp)
+               
+   except:
+       print("Unexpected error:", sys.exc_info()[0])
+       traceback.print_exc(file=sys.stdout)
 
