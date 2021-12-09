@@ -54,7 +54,7 @@ def hack_for_no_nouns_case(terms_arr):
                break
         else:
             i += 1
-    if (not found and len(terms_arr) > 1):
+    if (not found and len(terms_arr) >= 1):
         term_info = terms_arr[0]
         term_info[TAG_POS] =  noun_tags[0]
 
