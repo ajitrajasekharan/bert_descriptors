@@ -489,7 +489,11 @@ class BatchInference:
                         #if (index in string.punctuation or index.startswith('##') or len(index) == 1 or index.startswith('.') or index.startswith('[')):
                         if index.lower() in self.descs: #these have almost no entity info - glue words like "the","a"
                             continue
+                        #if (index in string.punctuation  or len(index) == 1 or index.startswith('.') or index.startswith('[') or index.startswith("#")):
                         if (index in string.punctuation  or len(index) == 1 or index.startswith('.') or index.startswith('[')):
+                            continue
+                        if (index.startswith("#")): #subwords suggest model is trying to predict a multi word term that generally tends to be noisy. So penalize. Count and skip
+                            k += 1
                             continue
                         #print(index,round(float(sorted_d[index]),4))
                         if (sent_index % 2 != 0):
@@ -539,6 +543,8 @@ class BatchInference:
 
 
 test_arr = [
+       "The new omicron variant could increase the likelihood that people will need a fourth coronavirus  vaccine dose earlier than expected, executives at Prin dummy:__entity__  said Wednesday .",
+       "The new omicron variant could increase the likelihood that people will need a fourth coronavirus  vaccine dose earlier than expected, executives at pharmaceutical:__entity__ giant:__entity__ Pfizer:__entity__  said Wednesday .",
        "The conditions:__entity__ in the camp were very poor",
         "Imatinib:__entity__ is used to treat nsclc",
         "imatinib:__entity__ is used to treat nsclc",
