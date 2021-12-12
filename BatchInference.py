@@ -326,7 +326,7 @@ class BatchInference:
 
 
     def normalize_sent(self,sent):
-        normalized_tokens = "!\"%'(),.;?[]`{}"
+        normalized_tokens = "!\"%(),.;?[]`{}"
         end_tokens = "!,.:;?"
         sent = sent.rstrip()
         if (len(sent) > 1):
