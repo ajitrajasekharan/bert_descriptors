@@ -519,6 +519,7 @@ class BatchInference:
                                         index = override_index
                                         entity_count = override_entity_count
                                         entity = override_entity
+                                        k = top_k #just add this override once. We dont have to add this override for each descripor and inundate downstream NER with the same signature
                         
                             if (self.log_descs):
                                 self.ci_fp.write(index + " " + entity + " " +  entity_count + " " + str(round(float(sorted_d[index]),4)) +  "\n")
@@ -543,6 +544,7 @@ class BatchInference:
 
 
 test_arr = [
+       "He felt New York has a chance:__entity__ to win this year's competition .",
        "The new omicron variant could increase the likelihood that people will need a fourth coronavirus  vaccine dose earlier than expected, executives at Prin dummy:__entity__  said Wednesday .",
        "The new omicron variant could increase the likelihood that people will need a fourth coronavirus  vaccine dose earlier than expected, executives at pharmaceutical:__entity__ giant:__entity__ Pfizer:__entity__  said Wednesday .",
        "The conditions:__entity__ in the camp were very poor",
