@@ -326,7 +326,7 @@ class BatchInference:
 
 
     def normalize_sent(self,sent):
-        normalized_tokens = "!\"%(),.;?[]`{}"
+        normalized_tokens = "!\"%();?[]`{}"
         end_tokens = "!,.:;?"
         sent = sent.rstrip()
         if (len(sent) > 1):
@@ -364,10 +364,11 @@ class BatchInference:
         #This is a modification of input text to words in vocab that match it in case insensitive manner. 
         #This is *STILL* required when we are using subwords too for prediction. The prediction quality is still better.
         #An example is Mesothelioma is caused by exposure to asbestos. The quality of prediction is better when Mesothelioma is not split by lowercasing with A100 model
+        pdb.set_trace()
         if (self.tokmod):
             sent = self.modify_text_to_match_vocab(sent)
 
-        #The input sentence is normalized. Specifically all input ist terminated with a punctuation if not already present. Also some of the punctuation marks are separated from text if glued to a word
+        #The input sentence is normalized. Specifically all input is terminated with a punctuation if not already present. Also some of the punctuation marks are separated from text if glued to a word
         sent = self.normalize_sent(sent)
 
         #Step 1. Find entities to tag if user did not explicitly tag terms
@@ -544,6 +545,7 @@ class BatchInference:
 
 
 test_arr = [
+       "1. Jesper:__entity__ Ronnback:__entity__ ( Sweden:__entity__ ) 25.76 points",
        "He felt New York has a chance:__entity__ to win this year's competition .",
        "The new omicron variant could increase the likelihood that people will need a fourth coronavirus  vaccine dose earlier than expected, executives at Prin dummy:__entity__  said Wednesday .",
        "The new omicron variant could increase the likelihood that people will need a fourth coronavirus  vaccine dose earlier than expected, executives at pharmaceutical:__entity__ giant:__entity__ Pfizer:__entity__  said Wednesday .",
