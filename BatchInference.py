@@ -364,7 +364,6 @@ class BatchInference:
         #This is a modification of input text to words in vocab that match it in case insensitive manner. 
         #This is *STILL* required when we are using subwords too for prediction. The prediction quality is still better.
         #An example is Mesothelioma is caused by exposure to asbestos. The quality of prediction is better when Mesothelioma is not split by lowercasing with A100 model
-        pdb.set_trace()
         if (self.tokmod):
             sent = self.modify_text_to_match_vocab(sent)
 
@@ -384,6 +383,7 @@ class BatchInference:
         #Step 2. Create N CS sentences
         #This returns masked sentences for all positions
         main_sent_arr,masked_sent_arr,span_arr = utils.detect_masked_positions(terms_arr)
+        ignore_cs = True if (len(masked_sent_arr) == 1 and len(masked_sent_arr[0]) == 2 and  masked_sent_arr[0][0] == "__entity__" and masked_sent_arr[0][1] == ".") else False #This is a boundary condition to avoid using cs if the input is just trying to get entity type for a phrase. There is no sentence context in that case.
 
 
         #Step 2. Create N CI sentences
@@ -499,10 +499,16 @@ class BatchInference:
                         #print(index,round(float(sorted_d[index]),4))
                         if (sent_index % 2 != 0):
                             #CS predictions
-                            entity,entity_count,dummy = self.find_entity(index)
+                            if (ignore_cs): #this is to avoid the boundary case of an input where all terms are tagged for prediction. CS prediction is meaningless in this case - no context
+                                index = "x"
+                                entity_count =   "1"
+                                entity = "UNTAGGED_ENTITY"
+                            else:
+                                entity,entity_count,dummy = self.find_entity(index)
                             if (self.log_descs):
                                 self.cs_fp.write(index + " " + entity +  " " +  entity_count + " " + str(round(float(sorted_d[index]),4)) + "\n")
-                            curr_sent_arr.append({"desc":index,"e":entity,"e_count":entity_count,"v":str(round(float(sorted_d[index]),4))})
+                            if (not ignore_cs):
+                                curr_sent_arr.append({"desc":index,"e":entity,"e_count":entity_count,"v":str(round(float(sorted_d[index]),4))})
                             if (all_sentences_arr[sent_index].strip().rstrip(".").strip().endswith("entity")):
                                 self.always_log_fp.write(' '.join(all_sentences_arr[sent_index].split()[:-1]) + " " + index + " :__entity__\n")
                         else:
@@ -545,6 +551,7 @@ class BatchInference:
 
 
 test_arr = [
+       "Sam:__entity__ Malone:__entity__ .",
        "1. Jesper:__entity__ Ronnback:__entity__ ( Sweden:__entity__ ) 25.76 points",
        "He felt New York has a chance:__entity__ to win this year's competition .",
        "The new omicron variant could increase the likelihood that people will need a fourth coronavirus  vaccine dose earlier than expected, executives at Prin dummy:__entity__  said Wednesday .",
