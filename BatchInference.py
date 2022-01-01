@@ -499,12 +499,7 @@ class BatchInference:
                         #print(index,round(float(sorted_d[index]),4))
                         if (sent_index % 2 != 0):
                             #CS predictions
-                            if (ignore_cs): #this is to avoid the boundary case of an input where all terms are tagged for prediction. CS prediction is meaningless in this case - no context
-                                index = "x"
-                                entity_count =   "1"
-                                entity = "UNTAGGED_ENTITY"
-                            else:
-                                entity,entity_count,dummy = self.find_entity(index)
+                            entity,entity_count,dummy = self.find_entity(index)
                             if (self.log_descs):
                                 self.cs_fp.write(index + " " + entity +  " " +  entity_count + " " + str(round(float(sorted_d[index]),4)) + "\n")
                             if (not ignore_cs):
