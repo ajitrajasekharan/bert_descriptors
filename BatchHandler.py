@@ -39,7 +39,7 @@ class BatchHandler(ResponseHandler.ResponseHandler):
             print("API param removed Arg = ",param)
             param = urllib.parse.unquote(param).split('/')
             usecls = True if param[0] == '1' else False #this is a NOOP for batch service
-            out = singleton.get_descriptors(param[1])
+            out = singleton.get_descriptors('/'.join(param[1:]))
             out = json.dumps(out,indent=4)
             #print("Arg = ",write_obj.path[1:])
             #out = singleton.punct_sentence(urllib.parse.unquote(write_obj.path[1:].lower()))
