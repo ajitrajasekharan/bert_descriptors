@@ -119,7 +119,7 @@ def read_labels(labels_file):
 
 
 class BatchInference:
-    def __init__(self, path,to_lower,patched,topk,abbrev,tokmod,vocab_path,labels_file):
+    def __init__(self, path,to_lower,patched,topk,abbrev,tokmod,vocab_path,labels_file,delimsep):
         print("Model path:",path,"lower casing set to:",to_lower," is patched ", patched)
         self.path = path
         self.labels_dict,self.lc_labels_dict = read_labels(labels_file)
@@ -131,6 +131,7 @@ class BatchInference:
         self.patched = patched
         self.abbrev = abbrev
         self.tokmod  = tokmod
+        self.delimsep  = delimsep
         self.always_log_fp = open("CI_LOGS.txt","a")
         if (cf.read_config()["USE_CLS"] == "1"): #Models like Bert base cased return same prediction for CLS regardless of input. So ignore CLS
             print("************** USE CLS: Turned ON for this model. ******* ")
@@ -330,9 +331,10 @@ class BatchInference:
         end_tokens = "!,.:;?"
         sent = sent.rstrip()
         if (len(sent) > 1):
-            for i in range(len(normalized_tokens)):
-                sent = sent.replace(normalized_tokens[i],' ' + normalized_tokens[i] + ' ')
-            sent = sent.rstrip()
+            if (self.delimsep):
+                for i in range(len(normalized_tokens)):
+                    sent = sent.replace(normalized_tokens[i],' ' + normalized_tokens[i] + ' ')
+                sent = sent.rstrip()
             if (not sent.endswith(":__entity__")):
                 last_char = sent[-1]
                 if (last_char not in end_tokens): #End all sentences with a period if not already present in sentence.
@@ -546,6 +548,7 @@ class BatchInference:
 
 
 test_arr = [
+       "ajit? is an engineer .",
        "Sam:__entity__ Malone:__entity__ .",
        "1. Jesper:__entity__ Ronnback:__entity__ ( Sweden:__entity__ ) 25.76 points",
        "He felt New York has a chance:__entity__ to win this year's competition .",
@@ -640,14 +643,17 @@ if __name__ == '__main__':
    parser.add_argument('-no-tokmod', dest="tokmod", action='store_false',help='Modify input token casings to match vocab - meaningful only for cased models')
    parser.add_argument('-vocab', action="store", dest="vocab", default=DEFAULT_MODEL_PATH,help='Path to vocab file. This is required only if tokmod is true')
    parser.add_argument('-labels', action="store", dest="labels", default=DEFAULT_LABELS_PATH,help='Path to labels file. This returns labels also')
+   parser.add_argument('-delimsep', dest="delimsep", action='store_true',help='Modify input tokens where delimiters are stuck to tokens. Turned off by default to be in sync with test sets')
+   parser.add_argument('-no-delimsep', dest="delimsep", action='store_true',help='Modify input tokens where delimiters are stuck to tokens. Turned off by default to be in sync with test sets')
    parser.set_defaults(tolower=False)
    parser.set_defaults(patched=False)
    parser.set_defaults(abbrev=True)
    parser.set_defaults(tokmod=True)
+   parser.set_defaults(delimsep=False)
 
    results = parser.parse_args()
    try:
-       singleton = BatchInference(results.model,results.tolower,results.patched,results.topk,results.abbrev,results.tokmod,results.vocab,results.labels)
+       singleton = BatchInference(results.model,results.tolower,results.patched,results.topk,results.abbrev,results.tokmod,results.vocab,results.labels,results.delimsep)
        print("To lower casing is set to:",results.tolower)
        if (len(results.input) == 0):
            print("Canned test mode")

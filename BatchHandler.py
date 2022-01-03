@@ -17,6 +17,7 @@ ABBREV = True
 #Tok mod is helpful despite using subwords
 TOKMOD = True
 VOCAB="./"
+DEFAULT_DELIM_SEPARATE=False
 
 singleton = None
 try:
@@ -31,7 +32,7 @@ class BatchHandler(ResponseHandler.ResponseHandler):
         print("In derived class")
         global singleton
         if singleton is None:
-            singleton = BatchInference.BatchInference(MODEL_PATH,TOLOWER,PATCHED,TOPK,ABBREV,TOKMOD,VOCAB,DEFAULT_LABELS_PATH) 
+            singleton = BatchInference.BatchInference(MODEL_PATH,TOLOWER,PATCHED,TOPK,ABBREV,TOKMOD,VOCAB,DEFAULT_LABELS_PATH,DEFAULT_DELIM_SEPARATE) 
         if (write_obj is not None):
             param =write_obj.path[1:]
             print("Orig Arg = ",param)
