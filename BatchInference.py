@@ -132,6 +132,7 @@ class BatchInference:
         self.abbrev = abbrev
         self.tokmod  = tokmod
         self.delimsep  = delimsep
+        self.truncated_fp = open("truncated_sentences.txt","a")
         self.always_log_fp = open("CI_LOGS.txt","a")
         if (cf.read_config()["USE_CLS"] == "1"): #Models like Bert base cased return same prediction for CLS regardless of input. So ignore CLS
             print("************** USE CLS: Turned ON for this model. ******* ")
@@ -343,12 +344,20 @@ class BatchInference:
         return sent
                                
     def truncate_sent_if_too_long(self,text):
+       truncated_count = 0
+       orig_sent = text
        while (True):
            tok_text = '[CLS] ' + text + ' [SEP]'
            tokenized_text = self.tokenizer.tokenize(tok_text)
            if (len(tokenized_text) < MAX_TOKENIZED_SENT_LENGTH):
                 break
            text = ' '.join(text.split()[:-1])
+           truncated_count += 1
+       if (truncated_count > 0):
+            print("Input sentence was truncated by: ", truncated_count, " tokens")
+            self.truncated_fp.write("Input sentence was truncated by: " +  str(truncated_count) + " tokens\n")
+            self.truncated_fp.write(orig_sent + "\n")
+            self.truncated_fp.write(text + "\n\n")
        return text
             
 
@@ -544,6 +553,7 @@ class BatchInference:
             self.ci_fp.flush()
             self.cs_fp.flush()
         self.always_log_fp.flush()
+        self.truncated_fp.flush()
         return final_obj
 
 
