@@ -378,7 +378,7 @@ class BatchInference:
         if (self.tokmod):
             sent = self.modify_text_to_match_vocab(sent)
 
-        #The input sentence is normalized. Specifically all input is terminated with a punctuation if not already present. Also some of the punctuation marks are separated from text if glued to a word
+        #The input sentence is normalized. Specifically all input is terminated with a punctuation if not already present. Also some of the punctuation marks are separated from text if glued to a word(disabled by default for test set sync)
         sent = self.normalize_sent(sent)
 
         #Step 1. Find entities to tag if user did not explicitly tag terms
