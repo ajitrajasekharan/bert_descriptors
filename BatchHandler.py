@@ -9,6 +9,7 @@ import json
 
 #MODEL_PATH ='bert-large-cased'
 MODEL_PATH ='./'
+DEFAULT_CONFIG = "./server_config.json"
 DEFAULT_LABELS_PATH='./labels.txt'
 TOLOWER = False
 PATCHED = False
@@ -32,7 +33,7 @@ class BatchHandler(ResponseHandler.ResponseHandler):
         print("In derived class")
         global singleton
         if singleton is None:
-            singleton = BatchInference.BatchInference(MODEL_PATH,TOLOWER,PATCHED,TOPK,ABBREV,TOKMOD,VOCAB,DEFAULT_LABELS_PATH,DEFAULT_DELIM_SEPARATE) 
+            singleton = BatchInference.BatchInference(DEFAULT_CONFIG,MODEL_PATH,TOLOWER,PATCHED,TOPK,ABBREV,TOKMOD,VOCAB,DEFAULT_LABELS_PATH,DEFAULT_DELIM_SEPARATE) 
         if (write_obj is not None):
             param =write_obj.path[1:]
             print("Orig Arg = ",param)

@@ -21,6 +21,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 DEFAULT_TOP_K = 20
+DEFAULT_CONFIG = "./server_config.json"
 DEFAULT_MODEL_PATH='./'
 DEFAULT_LABELS_PATH='./labels.txt'
 DEFAULT_TO_LOWER=False
@@ -119,34 +120,36 @@ def read_labels(labels_file):
 
 
 class BatchInference:
-    def __init__(self, path,to_lower,patched,topk,abbrev,tokmod,vocab_path,labels_file,delimsep):
+    def __init__(self, config_file,path,to_lower,patched,topk,abbrev,tokmod,vocab_path,labels_file,delimsep):
         print("Model path:",path,"lower casing set to:",to_lower," is patched ", patched)
         self.path = path
+        base_path = cf.read_config(config_file)["BASE_PATH"] if  ("BASE_PATH" in cf.read_config(config_file)) else "./"
+        desc_file_path = cf.read_config(config_file)["DESC_FILE"] if  ("DESC_FILE" in cf.read_config(config_file)) else DESC_FILE
         self.labels_dict,self.lc_labels_dict = read_labels(labels_file)
         self.tokenizer = BertTokenizer.from_pretrained(path,do_lower_case=to_lower) ### Set this to to True for uncased models
         self.model = BertForMaskedLM.from_pretrained(path)
         self.model.eval()
-        self.descs = read_descs(DESC_FILE)
+        self.descs = read_descs(desc_file_path)
         self.top_k = topk
         self.patched = patched
         self.abbrev = abbrev
         self.tokmod  = tokmod
         self.delimsep  = delimsep
-        self.truncated_fp = open("truncated_sentences.txt","a")
-        self.always_log_fp = open("CI_LOGS.txt","a")
-        if (cf.read_config()["USE_CLS"] == "1"): #Models like Bert base cased return same prediction for CLS regardless of input. So ignore CLS
+        self.truncated_fp = open(base_path + "truncated_sentences.txt","a")
+        self.always_log_fp = open(base_path + "CI_LOGS.txt","a")
+        if (cf.read_config(config_file)["USE_CLS"] == "1"): #Models like Bert base cased return same prediction for CLS regardless of input. So ignore CLS
             print("************** USE CLS: Turned ON for this model. ******* ")
             self.use_cls = True
         else:
             print("************** USE CLS: Turned OFF for this model. ******* ")
             self.use_cls = False
-        if (cf.read_config()["LOG_DESCS"] == "1"):
+        if (cf.read_config(config_file)["LOG_DESCS"] == "1"):
             self.log_descs = True
-            self.ci_fp = open("log_ci_predictions.txt","w")
-            self.cs_fp = open("log_cs_predictions.txt","w")
+            self.ci_fp = open(base_path + "log_ci_predictions.txt","w")
+            self.cs_fp = open(base_path + "log_cs_predictions.txt","w")
         else:
             self.log_descs = False
-        self.pos_server_url  = cf.read_config()["POS_SERVER_URL"]
+        self.pos_server_url  = cf.read_config(config_file)["POS_SERVER_URL"]
         if (tokmod):
             self.o_vocab_dict,self.l_vocab_dict = read_vocab(vocab_path + "/vocab.txt")
         else:
@@ -639,6 +642,7 @@ def test_sentences(singleton,iter_val):
 
 if __name__ == '__main__':
    parser = argparse.ArgumentParser(description='BERT descriptor service given a sentence. The word to be masked is specified as the special token entity ',formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+   parser.add_argument('-config', action="store", dest="config", default=DEFAULT_CONFIG,help='config file path')
    parser.add_argument('-model', action="store", dest="model", default=DEFAULT_MODEL_PATH,help='BERT pretrained models, or custom model path')
    parser.add_argument('-input', action="store", dest="input", default="",help='Optional input file with sentences. If not specified, assumed to be canned sentence run (default behavior)')
    parser.add_argument('-topk', action="store", dest="topk", default=DEFAULT_TOP_K,type=int,help='Number of neighbors to display')
@@ -663,7 +667,7 @@ if __name__ == '__main__':
 
    results = parser.parse_args()
    try:
-       singleton = BatchInference(results.model,results.tolower,results.patched,results.topk,results.abbrev,results.tokmod,results.vocab,results.labels,results.delimsep)
+       singleton = BatchInference(results.config,results.model,results.tolower,results.patched,results.topk,results.abbrev,results.tokmod,results.vocab,results.labels,results.delimsep)
        print("To lower casing is set to:",results.tolower)
        if (len(results.input) == 0):
            print("Canned test mode")
