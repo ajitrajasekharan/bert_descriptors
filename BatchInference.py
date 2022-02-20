@@ -20,6 +20,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 
+
 DEFAULT_TOP_K = 20
 DEFAULT_CONFIG = "./server_config.json"
 DEFAULT_MODEL_PATH='./'
