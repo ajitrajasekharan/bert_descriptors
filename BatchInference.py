@@ -507,9 +507,9 @@ class BatchInference:
                         #if (index in string.punctuation  or len(index) == 1 or index.startswith('.') or index.startswith('[') or index.startswith("#")):
                         if (index in string.punctuation  or len(index) == 1 or index.startswith('.') or index.startswith('[')):
                             continue
-                        #if (index.startswith("#")): #subwords suggest model is trying to predict a multi word term that generally tends to be noisy. So penalize. Count and skip
-                        #    k += 1
-                        #    continue
+                        if (index.startswith("#")): #subwords suggest model is trying to predict a multi word term that generally tends to be noisy. So penalize. Count and skip
+                            k += 1
+                            continue
                         #print(index,round(float(sorted_d[index]),4))
                         if (sent_index % 2 != 0):
                             #CS predictions
